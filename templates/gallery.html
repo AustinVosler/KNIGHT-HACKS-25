@@ -22,15 +22,26 @@
 				return;
 			}
 			grid.innerHTML = '';
-			videos.forEach(video => {
+			for (const video of videos) {
+				// video: [id, path, O_filename, processed]
+				const id = video[0];
+				const filename = video[2];
 				const card = document.createElement('div');
 				card.className = 'video-card';
-				card.innerHTML = `
-					<video src="${video.url}" controls></video>
-					<div class="filename">${video.filename || ''}</div>
-				`;
+				// Fetch video blob
+				const videoRes = await fetch(`/api/videos/${id}`);
+				if (!videoRes.ok) {
+					card.innerHTML = `<div class="filename">${filename || ''}</div><p>Video not found</p>`;
+				} else {
+					const blob = await videoRes.blob();
+					const url = URL.createObjectURL(blob);
+					card.innerHTML = `
+						<video src="${url}" controls></video>
+						<div class="filename">${filename || ''}</div>
+					`;
+				}
 				grid.appendChild(card);
-			});
+			}
 		} catch (err) {
 			grid.innerHTML = '<p>Error loading videos.</p>';
 		}
