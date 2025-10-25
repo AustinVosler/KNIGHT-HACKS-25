@@ -6,8 +6,8 @@ import sqlite3
 import shutil
 
 FILE_PATH = 'videos/'
-if os.path.exists(FILE_PATH):
-    shutil.rmtree(FILE_PATH)
+# if os.path.exists(FILE_PATH):
+#    shutil.rmtree(FILE_PATH)
 os.makedirs(FILE_PATH, exist_ok=True)
 
 # Connect to SQLite database (or create it)
@@ -16,7 +16,7 @@ def database_connection():
 
 def initialize_db(conn):
     c = conn.cursor()
-    c.execute('DROP TABLE IF EXISTS videos')
+    # c.execute('DROP TABLE IF EXISTS videos')
     c.execute('''
         CREATE TABLE IF NOT EXISTS videos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
