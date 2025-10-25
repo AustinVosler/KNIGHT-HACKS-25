@@ -397,10 +397,10 @@ def video_upload(filename):
     
     # Korean heart MUST be registered before gun to get priority (both use thumb+index)
     # Use lists for sound_path for consistency with engine types
-    engine.register_gesture(KoreanHeartGesture(sound_path=["./sounds/kpop.mp3"], volume=0.8))
+    engine.register_gesture(KoreanHeartGesture(sound_path=["./sounds/kpop.mp3"], volume=1))
     engine.register_gesture(GunPoseGesture())
     
-    engine.register_gesture(OpenPalmGesture())
+    engine.register_gesture(OpenPalmGesture(sound_path=["./sounds/hi.mp3"], volume=1))
     engine.register_gesture(FistGesture())
     engine.register_gesture(PeaceSignGesture())
     engine.register_gesture(ThumbsUpGesture())
@@ -415,6 +415,16 @@ def video_upload(filename):
         cooldown_s=0.6,
         sound_path=["./sounds/bang.mp3"],
         volume=0.6
+    ))
+    # Hammer fist downward strike -> metal pipe impact
+    engine.register_motion(HammerStrikeMotion(
+        movement_threshold=0.01,   # Slightly stricter than recoil to avoid noise
+        gate_gesture="fist",
+        cooldown_s=0.6,
+        sound_path=["./sounds/metal_pipe.mp3"],
+        volume=0.6,
+        require_downward=True,
+        min_down_ratio=0.6,
     ))
     
     # Register proximity rules with sounds
@@ -585,4 +595,4 @@ def video_upload(filename):
 
 if __name__ == "__main__":
     #main()
-    video_upload("./videos/2.webm")
+    video_upload("./videos/4.webm")

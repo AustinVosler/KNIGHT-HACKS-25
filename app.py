@@ -4,7 +4,6 @@ from flask import Flask, jsonify, request, render_template, send_file
 import os
 import sqlite3
 import shutil
-from moviepy import VideoFileClip
 
 FILE_PATH = 'videos/'
 # if os.path.exists(FILE_PATH):
