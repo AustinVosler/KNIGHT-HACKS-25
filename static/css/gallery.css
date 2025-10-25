@@ -1,0 +1,30 @@
+/* Gallery page-specific styles */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  margin-top: 2.5rem;
+  padding: 0 2vw;
+}
+.video-card {
+  background: rgba(255,255,255,0.85);
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(16,24,40,0.10);
+  padding: 1rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.video-card video {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+}
+.video-card .filename {
+  font-size: 1rem;
+  color: var(--ink);
+  margin-top: 0.5rem;
+  word-break: break-all;
+}

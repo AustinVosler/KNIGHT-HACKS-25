@@ -1,88 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Video Recorder</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="stylesheet" href="/static/css/colors.css" />
-    <link rel="stylesheet" href="/static/css/background.css" />
-    <link rel="stylesheet" href="/static/css/index.css" />
-  </head>
+{% extends "base.html" %}
 
-  <body>
-    <main class="page">
-      <div class="swirl swirl-1" aria-hidden="true"></div>
-      <div class="swirl swirl-2" aria-hidden="true"></div>
-      <div class="swirl swirl-3" aria-hidden="true"></div>
-      <div class="swirl swirl-4" aria-hidden="true"></div>
-      <div class="swirl-line swirl-line-1" aria-hidden="true"></div>
-      <div class="swirl-line swirl-line-2" aria-hidden="true"></div>
-      <div class="swirl-line swirl-line-3" aria-hidden="true"></div>
+{% block title %}Video Recorder{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/index.css" />{% endblock %}
 
-      <div class="center-content">
-        <h1 class="brand">Record Your Video</h1>
-        <video id="preview" width="640" height="480" autoplay></video>
-        <br />
-        <button class="cta" id="startBtn">Start Recording</button>
-        <button class="cta" id="stopBtn" disabled>Stop Recording</button>
-      </div>
-    </main>
+{% block content %}
+  <h1 class="brand">Record Your Video</h1>
+  <video id="preview" width="640" height="480" autoplay></video>
+  <br />
+  <button class="cta" id="startBtn">Start Recording</button>
+  <button class="cta" id="stopBtn" disabled>Stop Recording</button>
+{% endblock %}
 
-    <script>
-      const preview = document.getElementById("preview");
-      const startBtn = document.getElementById("startBtn");
-      const stopBtn = document.getElementById("stopBtn");
+{% block scripts %}
+<script>
+  const preview = document.getElementById("preview");
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
 
-      let mediaRecorder;
-      let recordedChunks = [];
+  let mediaRecorder;
+  let recordedChunks = [];
 
-      // Get access to the webcam
-      navigator.mediaDevices
-        .getUserMedia({ video: true, audio: true })
-        .then((stream) => {
-          preview.srcObject = stream;
+  // Get access to the webcam
+  navigator.mediaDevices
+    .getUserMedia({ video: true, audio: true })
+    .then((stream) => {
+      preview.srcObject = stream;
 
-          mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder = new MediaRecorder(stream);
 
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) recordedChunks.push(e.data);
-          };
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
 
-          mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: "video/webm" });
-            recordedChunks = [];
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        recordedChunks = [];
 
-            // Upload video to server
-            const formData = new FormData();
-            formData.append("video", blob, "recorded_video.webm");
+        // Upload video to server
+        const formData = new FormData();
+        formData.append("video", blob, "recorded_video.webm");
 
-            fetch("/upload", {
-              method: "POST",
-              body: formData,
-            })
-              .then((response) => {
-                alert("Video uploaded successfully!");
-              })
-              .catch((err) => {
-                console.error(err);
-              });
-          };
+        fetch("/upload", {
+          method: "POST",
+          body: formData,
         })
-        .catch((err) => {
-          console.error("Error accessing webcam: ", err);
-        });
-
-      startBtn.onclick = () => {
-        mediaRecorder.start();
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
+          .then((response) => {
+            alert("Video uploaded successfully!");
+          })
+          .catch((err) => {
+            console.error(err);
+          });
       };
+    })
+    .catch((err) => {
+      console.error("Error accessing webcam: ", err);
+    });
 
-      stopBtn.onclick = () => {
-        mediaRecorder.stop();
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-      };
-    </script>
-  </body>
-</html>
+  startBtn.onclick = () => {
+    mediaRecorder.start();
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+  };
+
+  stopBtn.onclick = () => {
+    mediaRecorder.stop();
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+  };
+</script>
+{% endblock %}

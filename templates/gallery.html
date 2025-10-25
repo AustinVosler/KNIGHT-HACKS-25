@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/gallery.css" />
+{% endblock %}
+
+{% block content %}
+	<h1 class="brand">Gallery</h1>
+	<div class="video-grid" id="videoGrid"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+	async function loadVideos() {
+		const grid = document.getElementById('videoGrid');
+		grid.innerHTML = '<p>Loading videos...</p>';
+		try {
+			const res = await fetch('/api/videos');
+			const videos = await res.json();
+			if (!Array.isArray(videos) || videos.length === 0) {
+				grid.innerHTML = '<p>No videos found.</p>';
+				return;
+			}
+			grid.innerHTML = '';
+			videos.forEach(video => {
+				const card = document.createElement('div');
+				card.className = 'video-card';
+				card.innerHTML = `
+					<video src="${video.url}" controls></video>
+					<div class="filename">${video.filename || ''}</div>
+				`;
+				grid.appendChild(card);
+			});
+		} catch (err) {
+			grid.innerHTML = '<p>Error loading videos.</p>';
+		}
+	}
+	window.addEventListener('DOMContentLoaded', loadVideos);
+</script>
+{% endblock %}
