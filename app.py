@@ -42,7 +42,7 @@ def initialize_db(conn):
 def add_video(folder, filename, O_filename):
     with database_connection() as conn: 
         c = conn.cursor()
-        c.execute('INSERT INTO videos (folder, filename, O_filename) VALUES (?, ?, ?)', (folder, filename, O_filename))
+        c.execute('INSERT INTO unprocessed_videos (folder, filename, O_filename) VALUES (?, ?, ?)', (folder, filename, O_filename))
         conn.commit()
         return c.lastrowid
 
