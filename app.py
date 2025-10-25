@@ -1,6 +1,6 @@
 import webbrowser
 from threading import Thread
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, send_file
 import os
 import sqlite3
 import shutil
@@ -67,6 +67,17 @@ def add_video_route():
     data.save(path)
     return jsonify({"id": video_id}), 201
 
+@app.route('/api/videos/<int:id>', methods=['GET'])
+def send_video(id):
+    with database_connection() as conn:
+        c = conn.cursor()
+        c.execute('SELECT * FROM videos WHERE id = ?', (id,))
+        video = c.fetchone()
+        if not video:
+            return jsonify({"error": "Video not found"}), 404
+    video_path = os.path.join(FILE_PATH, str(id) + ".webm")
+    return send_file(video_path, mimetype='video/webm')
+
 def open_browser():
     webbrowser.open("http://127.0.0.1:5000")
 
@@ -75,5 +86,5 @@ if __name__ == '__main__':
     initialize_db(conn)
     conn.close()
 
-    Thread(target=open_browser).start()
+    # Thread(target=open_browser).start()
     app.run(debug=True)
