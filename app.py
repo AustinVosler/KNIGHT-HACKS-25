@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request, render_template, send_file
 import os
 import sqlite3
 import shutil
+from moviepy import VideoFileClip
 
 FILE_PATH = 'videos/'
 # if os.path.exists(FILE_PATH):
@@ -50,6 +51,15 @@ def record():
 def gallery():
     return render_template('gallery.html')
 
+# @app.route('/about')
+# def about():
+#     return render_template('about.html')
+
+@app.route('/trimming')
+def trimming():
+    videos = [f for f in os.listdir(FILE_PATH) if f.endswith('.webm')]
+    return render_template('trimming.html')
+
 ### API ENDPOINTS ###
 
 @app.route('/api/data', methods=['GET'])
@@ -84,6 +94,8 @@ def send_video(id):
             return jsonify({"error": "Video not found"}), 404
     video_path = os.path.join(FILE_PATH, str(id) + ".webm")
     return send_file(video_path, mimetype='video/webm')
+
+
 
 def open_browser():
     webbrowser.open("http://127.0.0.1:5000")
