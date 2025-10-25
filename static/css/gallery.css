@@ -1,9 +1,11 @@
-/* Gallery page-specific styles */
+
 .video-grid {
+  margin-top: 5.5rem !important;
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 2rem;
-  margin-top: 2.5rem;
   padding: 0 2vw;
 }
 /* Ensure video cards display above background elements */
