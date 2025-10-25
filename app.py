@@ -42,7 +42,7 @@ def record():
 def get_data():
     return jsonify({"message": "This is your Flask backend!"})
 
-@app.route('/videos', methods=['GET'])
+@app.route('/api/videos', methods=['GET'])
 def list_videos():
     with database_connection() as conn:
         c = conn.cursor()
