@@ -1,5 +1,7 @@
 
+/* Enable scrolling for gallery page */
 .video-grid {
+  min-height: 80vh;
   margin-top: 5.5rem !important;
   position: relative;
   z-index: 1;
