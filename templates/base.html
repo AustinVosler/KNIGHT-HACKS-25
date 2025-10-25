@@ -12,9 +12,9 @@
     <main class="page">
       <!-- Top left navigation buttons -->
       <nav class="top-nav">
-        <a href="/record" class="nav-btn">Record</a>
-        <a href="/gallery" class="nav-btn">Gallery</a>
-        <a href="/about" class="nav-btn">About</a>
+        <a href="/record" class="nav-btn {{ 'active' if request.path == '/record' else '' }}">Record</a>
+        <a href="/gallery" class="nav-btn {{ 'active' if request.path == '/gallery' else '' }}">Gallery</a>
+        <a href="/about" class="nav-btn {{ 'active' if request.path == '/about' else '' }}">About</a>
       </nav>
 
       <div class="swirl swirl-1" aria-hidden="true"></div>

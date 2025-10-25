@@ -20,6 +20,12 @@ body {
   justify-content: center;
 }
 
+nav a.active {
+  pointer-events: none; /* disables clicking */
+  opacity: 0.6;
+  text-decoration: underline;
+}
+
 .swirl {
   position: absolute;
   border-radius: 50% 40% 60% 50% / 60% 50% 40% 50%;
