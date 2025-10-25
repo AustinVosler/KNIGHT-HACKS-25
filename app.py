@@ -1,6 +1,7 @@
 import webbrowser
 from threading import Thread
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
+import os
 import sqlite3
 
 # Connect to SQLite database (or create it)
@@ -20,6 +21,10 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     return "Hello, Flask!"
+
+@app.route('/api/record')
+def record():
+    return render_template('recorder.html')
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
