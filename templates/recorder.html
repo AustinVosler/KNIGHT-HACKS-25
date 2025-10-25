@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block body_class %}recorder-page{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/index.css" />
 <link rel="stylesheet" href="/static/css/recorder.css" />
@@ -10,8 +12,9 @@
   <div class="recorder-frame">
     <video id="preview" width="640" height="480" autoplay></video>
   </div>
-  <br />
-  <button class="cta" id="recordBtn">Start Recording</button>
+  <div class="recorder-actions">
+    <button class="cta recorder-btn" id="recordBtn">Start Recording</button>
+  </div>
 {% endblock %}
 
 {% block scripts %}
@@ -81,5 +84,6 @@
       recordBtn.classList.remove("recording");
     }
   };
+// ...existing code...
 </script>
 {% endblock %}

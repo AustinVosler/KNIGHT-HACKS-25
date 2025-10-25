@@ -1,16 +1,82 @@
+.recorder-page {
+  align-items: center;
+  justify-content: flex-start;
+  flex-direction: column;
+}
+
+.recorder-page .page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 3rem;
+  padding-bottom: 2rem;
+  gap: 1.5rem;
+}
+
 .recorder-frame {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
-  background: #F15A29;
-  border: 3px solid var(--accent-4, #F15A29);
+  background: rgba(241, 90, 41, 0.95);
+  border: 3px solid #fff;
   border-radius: 18px;
-  box-shadow: 0 4px 18px rgba(16,24,40,0.10);
-  margin-bottom: 1rem;
-  max-width: 700px;
+  box-shadow: 0 8px 28px rgba(16,24,40,0.18);
+  margin-bottom: 0;
+  max-width: 780px;
   margin-left: auto;
   margin-right: auto;
+  z-index: 5;
+}
+
+.recorder-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
+}
+
+#preview {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  border-radius: 12px;
+  background: #000;
+  z-index: 6;
+}
+
+.recorder-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  z-index: 6;
+}
+
+.recorder-btn {
+  background: #fff;
+  color: var(--accent-4);
+  border: 2px solid var(--accent-4);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.85rem 2.25rem;
+}
+
+.recorder-btn:hover {
+  background: var(--accent-4);
+  color: #fff;
+}
+
+.recorder-btn.recording {
+  background: #d32f2f;
+  color: #fff;
+  border-color: #d32f2f;
+  box-shadow: 0 6px 20px rgba(211,47,47,0.25);
 }
 
 .cta.recording {
