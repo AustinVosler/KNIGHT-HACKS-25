@@ -29,6 +29,7 @@ def add_video(path, O_filename):
         return c.lastrowid
 
 app = Flask(__name__)
+#baka
 
 @app.route('/')
 def home():
