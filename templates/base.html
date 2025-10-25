@@ -17,13 +17,10 @@
         <a href="/about" class="nav-btn {{ 'active' if request.path == '/about' else '' }}">About</a>
       </nav>
 
-      <div class="swirl swirl-1" aria-hidden="true"></div>
-      <div class="swirl swirl-2" aria-hidden="true"></div>
-      <div class="swirl swirl-3" aria-hidden="true"></div>
-      <div class="swirl swirl-4" aria-hidden="true"></div>
-      <div class="swirl-line swirl-line-1" aria-hidden="true"></div>
-      <div class="swirl-line swirl-line-2" aria-hidden="true"></div>
-      <div class="swirl-line swirl-line-3" aria-hidden="true"></div>
+      <!-- New SVG background -->
+      <div class="background-svg" aria-hidden="true">
+        <img src="/static/img/background.svg" alt="background" style="width:100vw;height:100vh;object-fit:cover;position:absolute;top:0;left:0;z-index:0;pointer-events:none;" />
+      </div>
       <div class="center-content">
         {% block content %}{% endblock %}
       </div>
