@@ -1,14 +1,32 @@
 
+/* Gallery page overrides */
+.gallery-page {
+  align-items: flex-start;
+}
+
+/* Gallery grid layout */
+/* Gallery grid layout: 4 columns for desktop, responsive for mobile */
 .video-grid {
-  margin-top: 5.5rem !important;
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 2rem;
-  padding: 0 2vw;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 6rem 2vw 2rem 2vw;
 }
-/* Ensure video cards display above background elements */
+
+@media (max-width: 1200px) {
+  .video-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 800px) {
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .video-card {
   position: relative;
   z-index: 1;

@@ -1,11 +1,10 @@
 /* Shared background and swirl styles for all pages */
 
+/* Page container should allow scrolling */
 .page {
   position: relative;
   width: 100vw;
-  height: 100vh;
   min-height: 100vh;
-  overflow: hidden;
 }
 html, body {
   height: 100%;
