@@ -244,23 +244,23 @@ class Gesture:
     
     Attributes:
         name: Unique identifier for this gesture type
-        sound_path: Optional path to sound file to play when detected
+        sound_path: Optional list of sound file paths to play when detected
         volume: Playback volume (0.0 to 1.0)
     """
     name: str
 
-    def __init__(self, name: str, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, name: str, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         """
         Initialize a gesture detector.
         
         Args:
             name: Unique name for this gesture
-            sound_path: Optional path to sound file
+            sound_path: Optional list of sound file paths (all will be played)
             volume: Playback volume (0.0 to 1.0), will be clamped
         """
         self.name = name
         # Optional per-gesture sound metadata (played by the app)
-        self.sound_path: Optional[str] = sound_path
+        self.sound_path: Optional[List[str]] = sound_path if sound_path is not None else None
         # Clamp volume to [0.0, 1.0]
         self.volume: float = max(0.0, min(1.0, volume))
 
@@ -287,23 +287,23 @@ class Motion:
     
     Attributes:
         name: Unique identifier for this motion type
-        sound_path: Optional path to sound file to play when triggered
+        sound_path: Optional list of sound file paths to play when triggered
         volume: Playback volume (0.0 to 1.0)
     """
     name: str
 
-    def __init__(self, name: str, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, name: str, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         """
         Initialize a motion detector.
         
         Args:
             name: Unique name for this motion
-            sound_path: Optional path to sound file
+            sound_path: Optional list of sound file paths (all will be played)
             volume: Playback volume (0.0 to 1.0), will be clamped
         """
         self.name = name
         # Optional per-motion sound metadata (played by the app)
-        self.sound_path: Optional[str] = sound_path
+        self.sound_path: Optional[List[str]] = sound_path if sound_path is not None else None
         # Clamp volume to [0.0, 1.0]
         self.volume: float = max(0.0, min(1.0, volume))
 
@@ -381,7 +381,7 @@ class Symbol6Gesture(Gesture):
     - Thumb tip and index tip close together (pinched)
     - Middle, ring, and pinky fingers extended
     """
-    def __init__(self, pinch_threshold: float = 0.60, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, pinch_threshold: float = 0.60, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         super().__init__("six", sound_path=sound_path, volume=volume)
         self.pinch_threshold = pinch_threshold
 
@@ -408,7 +408,7 @@ class Symbol7Gesture(Gesture):
     - Index finger pointing downward (negative Y direction in screen space)
     - Middle, ring, and pinky fingers curled
     """
-    def __init__(self, down_cos: float = 0.6, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, down_cos: float = 0.6, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         super().__init__("seven", sound_path=sound_path, volume=volume)
         self.down_cos = down_cos
 
@@ -439,7 +439,7 @@ class GunPoseGesture(Gesture):
     
     Commonly used for trigger-based interactions like the recoil motion.
     """
-    def __init__(self, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         super().__init__("gun", sound_path=sound_path, volume=volume)
 
     def detect(self, lm_list) -> bool:
@@ -468,7 +468,7 @@ class GunPoseGesture(Gesture):
 
 class OpenPalmGesture(Gesture):
     """All five fingers extended (open hand)."""
-    def __init__(self, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         super().__init__("palm", sound_path=sound_path, volume=volume)
 
     def detect(self, lm_list) -> bool:
@@ -483,7 +483,7 @@ class OpenPalmGesture(Gesture):
 
 class FistGesture(Gesture):
     """All fingers curled (fist)."""
-    def __init__(self, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         super().__init__("fist", sound_path=sound_path, volume=volume)
 
     def detect(self, lm_list) -> bool:
@@ -498,7 +498,7 @@ class FistGesture(Gesture):
 
 class PeaceSignGesture(Gesture):
     """Index and middle extended, others curled."""
-    def __init__(self, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         super().__init__("peace", sound_path=sound_path, volume=volume)
 
     def detect(self, lm_list) -> bool:
@@ -512,7 +512,7 @@ class PeaceSignGesture(Gesture):
 
 class ThumbsUpGesture(Gesture):
     """Only thumb extended, others curled."""
-    def __init__(self, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         super().__init__("thumbs_up", sound_path=sound_path, volume=volume)
 
     def detect(self, lm_list) -> bool:
@@ -527,7 +527,7 @@ class ThumbsUpGesture(Gesture):
 
 class OKSignGesture(Gesture):
     """Thumb and index tip touching (circle), other fingers extended."""
-    def __init__(self, pinch_threshold: float = 0.2, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, pinch_threshold: float = 0.2, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         super().__init__("ok", sound_path=sound_path, volume=volume)
         self.pinch_threshold = pinch_threshold
 
@@ -542,17 +542,53 @@ class OKSignGesture(Gesture):
     
 
 class MiddleFingerGesture(Gesture):
-    """Only middle finger extended."""
-    def __init__(self, sound_path: Optional[str] = None, volume: float = 1.0):
+    """
+    Detects the "middle finger" gesture: only middle finger extended and pointing upright.
+
+    Rules:
+    - Index, ring, and pinky curled; middle extended
+    - Orientation: middle finger should be upright (toward screen up)
+      • Angle with the screen-up vector within a threshold (cosine > up_cos)
+      • Depth tilt limited so it's not pointing forward/backward (|z component| < max_z_tilt)
+
+    Notes:
+    - Thumb state is not enforced (can be either extended or curled)
+    - Screen coordinates: y increases downward; "upright" means negative y direction
+    """
+    def __init__(self, up_cos: float = 0.7, max_z_tilt: float = 0.4, sound_path: Optional[List[str]] = None, volume: float = 1.0):
+        """
+        Args:
+            up_cos: Minimum cosine with the upward direction (0..1). Higher = stricter uprightness.
+            max_z_tilt: Maximum allowed absolute z component of the finger direction (0..1).
+            sound_path: Optional list of sound file paths.
+            volume: Playback volume (0.0..1.0).
+        """
         super().__init__("middle_finger", sound_path=sound_path, volume=volume)
+        self.up_cos = up_cos
+        self.max_z_tilt = max_z_tilt
 
     def detect(self, lm_list) -> bool:
-        return (
-            not _is_ext(lm_list, "index")
+        # Finger state: only middle extended
+        base_condition = (
+            (not _is_ext(lm_list, "index"))
             and _is_ext(lm_list, "middle")
-            and not _is_ext(lm_list, "ring")
-            and not _is_ext(lm_list, "pinky")
+            and (not _is_ext(lm_list, "ring"))
+            and (not _is_ext(lm_list, "pinky"))
         )
+        if not base_condition:
+            return False
+
+        # Orientation: middle finger must point upward and not forward/backward.
+        m_mcp = np.array([lm_list[9][0], lm_list[9][1], lm_list[9][2]])
+        m_tip = np.array([lm_list[12][0], lm_list[12][1], lm_list[12][2]])
+        v = _safe_unit(m_tip - m_mcp)
+
+        # Up direction in screen space is negative Y
+        up = np.array([0.0, -1.0, 0.0])
+        upright_enough = float(np.dot(v, up)) > self.up_cos
+        not_forward_backward = abs(float(v[2])) < self.max_z_tilt
+
+        return upright_enough and not_forward_backward
 
 
 class KoreanHeartGesture(Gesture):
@@ -567,7 +603,7 @@ class KoreanHeartGesture(Gesture):
     
     Popular in Korean pop culture for expressing affection.
     """
-    def __init__(self, cross_threshold: float = 0.40, upward_threshold: float = -0.3, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, cross_threshold: float = 0.40, upward_threshold: float = -0.3, sound_path: Optional[List[str]] = None, volume: float = 1.0):
         super().__init__("korean_heart", sound_path=sound_path, volume=volume)
         self.cross_threshold = cross_threshold
         self.upward_threshold = upward_threshold  # Y-component threshold (negative = upward in screen coords)
@@ -631,15 +667,17 @@ class RecoilMotion(Motion):
     - Requires a gate gesture (typically "gun") to be held
     - Tracks wrist movement when gesture is active
     - Triggers when movement exceeds threshold
+    - Excludes downward motion (only upward/sideways triggers)
     - Has per-hand cooldown to prevent spam
     
     Commonly used for gun-firing interactions in games.
     """
-    def __init__(self, movement_threshold: float = 0.05, gate_gesture: str = "gun", cooldown_s: float = 0.4, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, movement_threshold: float = 0.05, gate_gesture: str = "gun", cooldown_s: float = 0.4, sound_path: Optional[List[str]] = None, volume: float = 1.0, exclude_downward: bool = True):
         super().__init__("recoil", sound_path=sound_path, volume=volume)
         self.movement_threshold = movement_threshold
         self.gate_gesture = gate_gesture
         self.cooldown_s = cooldown_s
+        self.exclude_downward = exclude_downward
         self.state: Dict[int, Dict[str, Optional[Tuple[float, float]]]] = {}
         self.last_trigger: Dict[int, float] = {}
 
@@ -654,9 +692,106 @@ class RecoilMotion(Motion):
                 return False
             else:
                 prev = st["prev"]
-                movement = euclid_2d(wrist, prev) if prev is not None else 0.0
+                if prev is None:
+                    st["prev"] = wrist
+                    return False
+                
+                # Calculate movement
+                dx = wrist[0] - prev[0]
+                dy = wrist[1] - prev[1]  # In screen coords, positive Y is DOWN
+                movement = math.sqrt(dx*dx + dy*dy)
+                
                 st["prev"] = wrist
+                
+                # Check if downward motion should be excluded
+                if self.exclude_downward and dy > 0:
+                    # Motion is downward (positive Y), reject it
+                    return False
+                
                 if movement > self.movement_threshold:
+                    last = self.last_trigger.get(hand_id, 0.0)
+                    if now - last > self.cooldown_s:
+                        self.last_trigger[hand_id] = now
+                        return True
+        else:
+            st["ready"] = False
+            st["prev"] = None
+        return False
+
+
+class HammerStrikeMotion(Motion):
+    """
+    Detects a hammer-fist downward strike while holding a specific gesture (default: "fist").
+
+    Behavior:
+    - Requires gate gesture (e.g., fist) to be active
+    - Tracks wrist movement frame-to-frame
+    - Triggers only on downward motion (positive screen Y)
+    - Requires total movement to exceed a threshold
+    - Optional: require that a minimum portion of movement is downward (directionality)
+    - Per-hand cooldown to prevent spamming
+
+    Typical use: play a heavy impact sound (e.g., metal pipe) when a fist strikes down.
+    """
+    def __init__(
+        self,
+        movement_threshold: float = 0.04,
+        gate_gesture: str = "fist",
+        cooldown_s: float = 0.5,
+        sound_path: Optional[List[str]] = None,
+        volume: float = 1.0,
+        require_downward: bool = True,
+        min_down_ratio: float = 0.6,
+    ):
+        """
+        Args:
+            movement_threshold: Minimum normalized movement to count as a strike.
+            gate_gesture: Gesture name that must be held (default: "fist").
+            cooldown_s: Minimum seconds between triggers per hand.
+            sound_path: Optional list of sounds to play when triggered.
+            volume: Playback volume (0..1).
+            require_downward: If True, only downward motion (dy>0) can trigger.
+            min_down_ratio: Portion of movement that must be downward (dy/mag), 0..1.
+        """
+        super().__init__("hammer_strike", sound_path=sound_path, volume=volume)
+        self.movement_threshold = movement_threshold
+        self.gate_gesture = gate_gesture
+        self.cooldown_s = cooldown_s
+        self.require_downward = require_downward
+        self.min_down_ratio = min(1.0, max(0.0, min_down_ratio))
+        self.state: Dict[int, Dict[str, Optional[Tuple[float, float]]]] = {}
+        self.last_trigger: Dict[int, float] = {}
+
+    def update(self, hand_id: int, lm_list, now: float, gesture_hits: Set[str]) -> bool:
+        wrist = (lm_list[0][0], lm_list[0][1])
+        st = self.state.setdefault(hand_id, {"prev": None, "ready": False})
+
+        if self.gate_gesture in gesture_hits:
+            if not st["ready"]:
+                st["ready"] = True
+                st["prev"] = wrist
+                return False
+            else:
+                prev = st["prev"]
+                if prev is None:
+                    st["prev"] = wrist
+                    return False
+
+                dx = wrist[0] - prev[0]
+                dy = wrist[1] - prev[1]  # Positive Y is downward in screen coords
+                mag = math.sqrt(dx*dx + dy*dy)
+                st["prev"] = wrist
+
+                # Directional checks
+                if self.require_downward and dy <= 0:
+                    return False
+                if mag < 1e-6:
+                    return False
+                down_ratio = dy / mag  # in [-inf, +inf], but positive if downward; cap by ratio
+                if self.require_downward and down_ratio < self.min_down_ratio:
+                    return False
+
+                if mag > self.movement_threshold:
                     last = self.last_trigger.get(hand_id, 0.0)
                     if now - last > self.cooldown_s:
                         self.last_trigger[hand_id] = now
@@ -683,7 +818,7 @@ class ProximityRule:
         b: Name of second gesture (can be same as 'a')
         threshold: Maximum normalized distance between hand centers
         cooldown_s: Minimum time between consecutive triggers
-        sound_path: Optional sound file for this proximity event
+        sound_path: Optional list of sound files for this proximity event
         volume: Playback volume (0.0 to 1.0)
     """
     a: str
@@ -693,7 +828,7 @@ class ProximityRule:
     cooldown_s: float = 0.4
     last_trigger: float = 0.0
     # Optional per-rule sound metadata
-    sound_path: Optional[str] = None
+    sound_path: Optional[List[str]] = None
     volume: float = 1.0
 
     def __post_init__(self):
