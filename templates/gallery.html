@@ -24,7 +24,10 @@
 			for (const video of videos) {
 				// video: [id, path, O_filename, processed]
 				const id = video[0];
-				const filename = video[2];
+				let filename = video[2];
+				if (filename) {
+					filename = filename.replace(/\.[^/.]+$/, "");
+				}
 				const card = document.createElement('div');
 				card.className = 'video-card';
 				// Fetch video blob

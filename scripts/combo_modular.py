@@ -32,7 +32,7 @@ import os
 import tempfile # JW
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip # JW
 import time
-from typing import Optional
+from typing import Optional, List
 
 from gesture_engine import (
     GestureEngine,
@@ -46,6 +46,7 @@ from gesture_engine import (
     MiddleFingerGesture,
     KoreanHeartGesture,
     RecoilMotion,
+    HammerStrikeMotion,
     ProximityRule,
     GestureTriggerRule,
 )
@@ -88,26 +89,32 @@ def _load_sound(path: str, volume: float, cache: dict) -> Optional[pygame.mixer.
         return None
 
 
-def _play_sound(path: str, volume: float, cache: dict) -> bool:
+def _play_sound(paths: Optional[List[str]], volume: float, cache: dict) -> bool:
     """
-    Play a sound with given path and volume.
+    Play one or more sounds with given volume.
     
     Args:
-        path: File path to the sound file
+        paths: List of file paths to sound files (all will be played)
         volume: Playback volume (0.0 to 1.0)
         cache: Dictionary cache for Sound objects
     
     Returns:
-        True if sound was played successfully, False otherwise
+        True if at least one sound was played successfully, False otherwise
     """
-    snd = _load_sound(path, volume, cache)
-    if snd:
-        try:
-            snd.play()
-            return True
-        except Exception as ex:
-            print(f"Failed to play sound {path}: {ex}")
-    return False
+    if not paths:
+        return False
+    
+    played_any = False
+    for path in paths:
+        snd = _load_sound(path, volume, cache)
+        if snd:
+            try:
+                snd.play()
+                played_any = True
+            except Exception as ex:
+                print(f"Failed to play sound {path}: {ex}")
+    
+    return played_any
 
 
 def _get_gesture_by_name(engine: GestureEngine, name: str):
@@ -206,24 +213,38 @@ def main():
     engine.register_gesture(Symbol7Gesture(down_cos=0.6))
     
     # Korean heart MUST be registered before gun to get priority (both use thumb+index)
-    engine.register_gesture(KoreanHeartGesture(sound_path="./sounds/kpop.mp3", volume=0.8))
+    engine.register_gesture(KoreanHeartGesture(sound_path=["./sounds/kpop.mp3"], volume=0.8))
     engine.register_gesture(GunPoseGesture())
     
-    engine.register_gesture(OpenPalmGesture())
+    engine.register_gesture(OpenPalmGesture(sound_path=["./sounds/hi.mp3"], volume=3))
     engine.register_gesture(FistGesture())
     engine.register_gesture(PeaceSignGesture())
     engine.register_gesture(ThumbsUpGesture())
     
-    # Attach sound directly to the gesture class with a per-gesture volume
-    engine.register_gesture(MiddleFingerGesture(sound_path="./sounds/fahh.mp3", volume=1.0))
+    # Attach sounds directly to the gesture class with a per-gesture volume
+    # Middle finger plays BOTH fahh.mp3 AND thunder.mp3
+    engine.register_gesture(MiddleFingerGesture(sound_path=["./sounds/fahh.mp3", "./sounds/thunder.mp3"], volume=1.0))
     
     # Register motions with sounds
+    # Movement threshold: lower = more sensitive (easier to trigger), higher = less sensitive
+    # Typical quick hand jerk is around 0.03-0.08 in normalized coords
     engine.register_motion(RecoilMotion(
-        movement_threshold=0.05, 
+        movement_threshold=0.03,  # Made more sensitive (was 0.05)
         gate_gesture="gun", 
-        cooldown_s=0.6,
-        sound_path="./sounds/bang.mp3",
+        cooldown_s=0.4,  # Reduced cooldown to allow faster repeated shots
+        sound_path=["./sounds/bang.mp3"],
         volume=0.6
+    ))
+
+    # Hammer fist downward strike -> metal pipe impact
+    engine.register_motion(HammerStrikeMotion(
+        movement_threshold=0.01,   # Slightly stricter than recoil to avoid noise
+        gate_gesture="fist",
+        cooldown_s=0.6,
+        sound_path=["./sounds/metal_pipe.mp3"],
+        volume=0.6,
+        require_downward=True,
+        min_down_ratio=0.6,
     ))
     
     # Register proximity rules with sounds
@@ -232,7 +253,7 @@ def main():
         b="seven", 
         threshold=0.50, 
         cooldown_s=0.6,
-        sound_path="./sounds/67.mp3",
+        sound_path=["./sounds/67.mp3"],
         volume=0.1
     ))
     engine.register_rule(ProximityRule(
@@ -240,13 +261,14 @@ def main():
         b="thumbs_up", 
         threshold=0.30, 
         cooldown_s=0.6,
-        sound_path="./sounds/yippee.mp3",
+        sound_path=["./sounds/yippee.mp3"],
         volume=0.7
     ))
     
     # Register single-gesture trigger rules (emit events directly for gestures)
     engine.register_gesture_rule(GestureTriggerRule(g="middle_finger", cooldown_s=1.0))
     engine.register_gesture_rule(GestureTriggerRule(g="korean_heart", cooldown_s=1.5))  # Longer cooldown for heart
+    engine.register_gesture_rule(GestureTriggerRule(g="palm", cooldown_s=1.0))
     # Uncomment to add more proximity rules:
     # engine.register_rule(ProximityRule(a="palm", b="fist", threshold=0.15, cooldown_s=0.6))
     # engine.register_rule(ProximityRule(a="peace", b="thumbs_up", threshold=0.15, cooldown_s=0.6))
@@ -292,8 +314,10 @@ def main():
                     if label:
                         x = int(center[0] * frame.shape[1])
                         y = int(center[1] * frame.shape[0])
-                        cv2.putText(frame, f"{hid}:{label}", (x - 20, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2, cv2.LINE_AA)
-
+                        # Highlight gun gesture in green for easier debugging
+                        color = (0, 255, 0) if "gun" in detections.get(hid, set()) else (0, 255, 255)
+                        cv2.putText(frame, f"{hid}:{label}", (x - 20, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2, cv2.LINE_AA)
+        
         # React to events
         for e in events:
             etype = e.get("type", "")
@@ -305,23 +329,23 @@ def main():
             # Route to the appropriate sound source based on event type
             played = False
             
-            # 1. Gesture events (simple name, no colon)
-            if ":" not in etype and etype not in ["recoil"]:
+            # First, check for motion events by name
+            m = _get_motion_by_name(engine, etype)
+            if m is not None:
+                if m.sound_path:
+                    played = _play_sound(m.sound_path, m.volume, sound_cache)
+                    if played:
+                        print(f"Playing motion sound: {m.name}")
+            
+            # Gesture events (simple name, no colon, and not a motion)
+            elif ":" not in etype:
                 g = _get_gesture_by_name(engine, etype)
                 if g and g.sound_path:
                     played = _play_sound(g.sound_path, g.volume, sound_cache)
                     if played:
                         print(f"Playing gesture sound: {g.name}")
             
-            # 2. Motion events (e.g., "recoil")
-            elif etype == "recoil":
-                m = _get_motion_by_name(engine, etype)
-                if m and m.sound_path:
-                    played = _play_sound(m.sound_path, m.volume, sound_cache)
-                    if played:
-                        print(f"Playing motion sound: {m.name}")
-            
-            # 3. Proximity events (format: "proximity:a+b")
+            # Proximity events (format: "proximity:a+b")
             elif etype.startswith("proximity:"):
                 rule = _get_rule_by_event_type(engine, etype)
                 if rule and rule.sound_path:

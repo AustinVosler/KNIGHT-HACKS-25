@@ -2,24 +2,26 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/index.css" />
+<link rel="stylesheet" href="/static/css/recorder.css" />
 {% endblock %}
 
 {% block content %}
   <h1 class="brand">Record Your Video</h1>
-  <video id="preview" width="640" height="480" autoplay></video>
+  <div class="recorder-frame">
+    <video id="preview" width="640" height="480" autoplay></video>
+  </div>
   <br />
-  <button class="cta" id="startBtn">Start Recording</button>
-  <button class="cta" id="stopBtn" disabled>Stop Recording</button>
+  <button class="cta" id="recordBtn">Start Recording</button>
 {% endblock %}
 
 {% block scripts %}
 <script>
   const preview = document.getElementById("preview");
-  const startBtn = document.getElementById("startBtn");
-  const stopBtn = document.getElementById("stopBtn");
+  const recordBtn = document.getElementById("recordBtn");
 
   let mediaRecorder;
   let recordedChunks = [];
+  let isRecording = false;
 
   // Get access to the webcam
   navigator.mediaDevices
@@ -66,16 +68,18 @@
       console.error("Error accessing webcam: ", err);
     });
 
-  startBtn.onclick = () => {
-    mediaRecorder.start();
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-  };
-
-  stopBtn.onclick = () => {
-    mediaRecorder.stop();
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
+  recordBtn.onclick = () => {
+    if (!isRecording) {
+      mediaRecorder.start();
+      isRecording = true;
+      recordBtn.textContent = "Stop Recording";
+      recordBtn.classList.add("recording");
+    } else {
+      mediaRecorder.stop();
+      isRecording = false;
+      recordBtn.textContent = "Start Recording";
+      recordBtn.classList.remove("recording");
+    }
   };
 </script>
 {% endblock %}
