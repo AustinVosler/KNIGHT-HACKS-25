@@ -33,14 +33,27 @@ def is_finger_extended_3d(landmarks, finger_indices, threshold=0.8):
     v3 /= np.linalg.norm(v3)
     return np.dot(v1, v2) > threshold and np.dot(v2, v3) > threshold
 
-def is_gun_shape(hand_landmarks):
+
+def get_hand_shape(hand_landmarks):
     landmarks = hand_landmarks.landmark
     thumb = is_finger_extended_3d(landmarks, FINGER_INDICES["thumb"])
     index = is_finger_extended_3d(landmarks, FINGER_INDICES["index"])
     middle = is_finger_extended_3d(landmarks, FINGER_INDICES["middle"])
-    ring = not is_finger_extended_3d(landmarks, FINGER_INDICES["ring"])
-    pinky = not is_finger_extended_3d(landmarks, FINGER_INDICES["pinky"])
-    return thumb and index and middle and ring
+    ring = is_finger_extended_3d(landmarks, FINGER_INDICES["ring"])
+    pinky = is_finger_extended_3d(landmarks, FINGER_INDICES["pinky"])
+    
+    print(thumb, index, middle, ring, pinky)
+    
+    return {
+        "thumb": thumb,
+        "index": index,
+        "middle": middle,
+        "ring": ring,
+        "pinky": pinky
+    }
+
+def is_gun_shape(hand_dict):
+    return hand_dict["thumb"] and hand_dict["index"] and not hand_dict["ring"]
 
 def distance(p1, p2):
     return math.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
@@ -71,8 +84,11 @@ while True:
                 hand_states[i] = {"prev_wrist": None, "gun_ready": False, "motion_triggered": False}
             
             state = hand_states[i]
-            
-            if is_gun_shape(hand_landmarks):
+
+            # Determine current hand shape (which fingers are extended)
+            hand_shape = get_hand_shape(hand_landmarks)
+
+            if is_gun_shape(hand_shape):
                 if not state["gun_ready"]:
                     # First frame gun pose detected for this hand
                     state["gun_ready"] = True
