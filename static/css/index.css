@@ -1,48 +1,51 @@
-/* Base page styles using the color variables from colors.css */
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-	margin:0;
-	font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-	background: linear-gradient(180deg, var(--bg) 0%, #fff 100%);
-	color: var(--ink);
-	display:flex;
-	align-items:center;
-	justify-content:center;
+* {
+  box-sizing: border-box;
 }
-.page{position:relative;width:min(920px,94vw);padding:3rem}
-.card{
-	background: rgba(255,255,255,0.85);
-	border:1px solid rgba(0,0,0,0.06);
-	border-radius:14px;
-	padding:2.5rem 3rem;
-	text-align:center;
-	box-shadow: 0 8px 30px rgba(16,24,40,0.08);
+.center-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 2;
 }
-.brand{margin:0 0 .5rem;font-size:2rem;letter-spacing:.5px}
-.lead{margin:0 0 1.75rem;color:rgba(0,0,0,0.6)}
 
-.cta{
-	appearance:none;
-	border:0;
-	background: linear-gradient(180deg,var(--accent-1),var(--accent-4));
-	color:white;
-	padding:.85rem 1.25rem;
-	font-size:1rem;
-	border-radius:10px;
-	cursor:pointer;
-	transition:transform .12s ease, box-shadow .12s ease;
-	box-shadow: 0 6px 18px rgba(232,13,11,0.18);
+.brand {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+  letter-spacing: 0.5px;
 }
-.cta:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(232,13,11,0.22)}
-.cta:active,.cta.pushed{transform:translateY(0);box-shadow:0 4px 12px rgba(0,0,0,0.12)}
+.lead {
+  margin: 0 0 1.75rem;
+  color: rgba(0, 0, 0, 0.6);
+}
 
-.decor{position:absolute;width:220px;height:120px;opacity:.92;border-radius:14px;z-index:-1}
-.decor.top-left{top:-40px;left:-40px;background:linear-gradient(135deg,var(--accent-2),var(--accent-3));transform:rotate(-8deg);filter:blur(6px)}
-.decor.bottom-right{right:-40px;bottom:-40px;background:linear-gradient(135deg,var(--accent-6),var(--accent-5));transform:rotate(6deg);filter:blur(6px)}
 
-@media (max-width:520px){
-	.page{padding:1.25rem}
-	.card{padding:1.5rem}
-	.brand{font-size:1.375rem}
+.cta {
+  appearance: none;
+  border: 0;
+  background: linear-gradient(180deg, var(--accent-1), var(--accent-4));
+  color: white;
+  padding: 0.85rem 1.25rem;
+  font-size: 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: 0 6px 18px rgba(232, 13, 11, 0.18);
+}
+.cta:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(232, 13, 11, 0.22);
+}
+.cta:active,
+.cta.pushed {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+
+@media (max-width: 520px) {
+  .brand {
+    font-size: 1.375rem;
+  }
 }
