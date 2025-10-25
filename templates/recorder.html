@@ -2,11 +2,29 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/index.css" />
+<style>
+  .recorder-frame {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  background: #F15A29;
+    border: 3px solid var(--accent-4, #F15A29);
+    border-radius: 18px;
+    box-shadow: 0 4px 18px rgba(16,24,40,0.10);
+    margin-bottom: 1rem;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
   <h1 class="brand">Record Your Video</h1>
-  <video id="preview" width="640" height="480" autoplay></video>
+  <div class="recorder-frame">
+    <video id="preview" width="640" height="480" autoplay></video>
+  </div>
   <br />
   <button class="cta" id="startBtn">Start Recording</button>
   <button class="cta" id="stopBtn" disabled>Stop Recording</button>
