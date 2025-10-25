@@ -30,7 +30,7 @@ def add_video(path, O_filename):
 
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/index')
 def home():
     return "Hello, Flask!"
 
