@@ -1,3 +1,30 @@
+"""
+Modular Gesture Recognition Demo
+
+This script demonstrates the gesture engine's capabilities by:
+- Detecting multiple hand gestures (6, 7, gun, Korean heart, etc.)
+- Triggering sounds based on gestures, motions, and proximity events
+- Running a real-time webcam feed with visual overlays
+
+Features:
+- Per-gesture sound attachment with volume control
+- Motion filtering to prevent false positives during fast hand movement
+- Proximity detection (e.g., two specific gestures coming together)
+- Edge-triggered gesture events with cooldown
+- Modular architecture: easily add new gestures, motions, and rules
+
+Usage:
+    python combo_modular.py
+
+Press 'q' to quit.
+
+Customization:
+- Add new gestures by registering them with the engine
+- Attach sounds by passing sound_path and volume parameters
+- Adjust thresholds and cooldowns for fine-tuning
+- Register new proximity rules or gesture trigger rules
+"""
+
 import cv2
 import mediapipe as mp
 import pygame
@@ -31,7 +58,17 @@ sound_cache = {}
 
 
 def _load_sound(path: str, volume: float, cache: dict) -> Optional[pygame.mixer.Sound]:
-    """Load a sound file and set its volume, using cache to avoid reloading."""
+    """
+    Load a sound file and set its volume, using cache to avoid reloading.
+    
+    Args:
+        path: File path to the sound file
+        volume: Playback volume (0.0 to 1.0)
+        cache: Dictionary cache mapping paths to Sound objects
+    
+    Returns:
+        pygame.mixer.Sound object if successful, None otherwise
+    """
     if not path:
         return None
     try:
@@ -50,7 +87,17 @@ def _load_sound(path: str, volume: float, cache: dict) -> Optional[pygame.mixer.
 
 
 def _play_sound(path: str, volume: float, cache: dict) -> bool:
-    """Play a sound with given path and volume. Returns True if played."""
+    """
+    Play a sound with given path and volume.
+    
+    Args:
+        path: File path to the sound file
+        volume: Playback volume (0.0 to 1.0)
+        cache: Dictionary cache for Sound objects
+    
+    Returns:
+        True if sound was played successfully, False otherwise
+    """
     snd = _load_sound(path, volume, cache)
     if snd:
         try:
@@ -62,6 +109,16 @@ def _play_sound(path: str, volume: float, cache: dict) -> bool:
 
 
 def _get_gesture_by_name(engine: GestureEngine, name: str):
+    """
+    Find a registered gesture by name.
+    
+    Args:
+        engine: GestureEngine instance
+        name: Gesture name to search for
+    
+    Returns:
+        Gesture object if found, None otherwise
+    """
     for g in engine.gestures:
         if g.name == name:
             return g
@@ -69,6 +126,16 @@ def _get_gesture_by_name(engine: GestureEngine, name: str):
 
 
 def _get_motion_by_name(engine: GestureEngine, name: str):
+    """
+    Find a registered motion by name.
+    
+    Args:
+        engine: GestureEngine instance
+        name: Motion name to search for
+    
+    Returns:
+        Motion object if found, None otherwise
+    """
     for m in engine.motions:
         if m.name == name:
             return m
@@ -76,7 +143,19 @@ def _get_motion_by_name(engine: GestureEngine, name: str):
 
 
 def _get_rule_by_event_type(engine: GestureEngine, event_type: str):
-    """Extract rule for proximity events (format: 'proximity:a+b')."""
+    """
+    Extract proximity rule for a given event type.
+    
+    Parses event strings like "proximity:six+seven" to find the matching
+    ProximityRule that triggered the event.
+    
+    Args:
+        engine: GestureEngine instance
+        event_type: Event type string (format: "proximity:a+b")
+    
+    Returns:
+        ProximityRule object if found, None otherwise
+    """
     if not event_type.startswith("proximity:"):
         return None
     # Parse 'proximity:a+b' -> find rule matching a and b
@@ -93,6 +172,18 @@ def _get_rule_by_event_type(engine: GestureEngine, event_type: str):
 
 
 def main():
+    """
+    Main entry point for the gesture recognition demo.
+    
+    Sets up:
+    - MediaPipe Hands for hand detection
+    - GestureEngine with registered gestures, motions, and rules
+    - OpenCV webcam capture and display
+    - Sound playback system with per-event routing
+    
+    Runs a real-time loop processing frames, detecting gestures, and
+    playing sounds based on events.
+    """
     # MediaPipe setup
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(
