@@ -51,8 +51,19 @@
           mediaRecorder.onstop = () => {
             const blob = new Blob(recordedChunks, { type: "video/webm" });
             recordedChunks = [];
+
+            let fileName = prompt("Enter a name for your masterpiece:", "my_video");
+            if (!fileName) {
+              fileName = "untitled_video";
+            }
+
+            // Make sure filename ends with .webm
+            if (!fileName.endsWith(".webm")) {
+              fileName += ".webm";
+            }
+    
                     // Upload video to server
-                    const videoFile = new File([blob], 'recorded_video.webm', { type: 'video/webm' });
+                    const videoFile = new File([blob], fileName, { type: 'video/webm' });
                     const formData = new FormData();
                     formData.append('file', videoFile);
 
