@@ -18,14 +18,23 @@ def database_connection():
 
 def initialize_db(conn):
     c = conn.cursor()
-    c.execute('DROP TABLE IF EXISTS videos')
+    c.execute('DROP TABLE IF EXISTS unprocessed_videos')
     c.execute('''
-        CREATE TABLE IF NOT EXISTS videos (
+        CREATE TABLE IF NOT EXISTS unprocessed_videos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             folder TEXT NOT NULL,
             filename TEXT NOT NULL,
             O_filename TEXT NOT NULL,
-            processed BOOLEAN DEFAULT 0
+            pair_id INTEGER UNIQUE DEFAULT NULL
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS processed_videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            O_filename TEXT NOT NULL,
+            pair_id INTEGER UNIQUE
         )
     ''')
     conn.commit()
@@ -33,7 +42,7 @@ def initialize_db(conn):
 def add_video(folder, filename, O_filename):
     with database_connection() as conn: 
         c = conn.cursor()
-        c.execute('INSERT INTO videos (folder, filename, O_filename, processed) VALUES (?, ?, ?, ?)', (folder, filename, O_filename, False))
+        c.execute('INSERT INTO videos (folder, filename, O_filename) VALUES (?, ?, ?)', (folder, filename, O_filename))
         conn.commit()
         return c.lastrowid
 
@@ -129,6 +138,38 @@ def delete_video(id):
     if os.path.exists(path):
         os.remove(path)
     return jsonify({"message": "Video deleted"}), 204
+
+@app.route('/api/videos/process/<int:id>', methods=['PUT'])
+def process_video(id):
+    with database_connection() as conn:
+        c = conn.cursor()
+        # Find the unprocessed video
+        c.execute('SELECT * FROM unprocessed_videos WHERE id = ?', (id,))
+        unprocessed = c.fetchone()
+        if not unprocessed:
+            return jsonify({"error": "Unprocessed video not found"}), 404
+
+        # Build path to the unprocessed video
+        input_path = os.path.join(unprocessed[1], unprocessed[2])  # folder, filename
+
+        # --- Process the video here ---
+        # processed_video_path = FUNCTION
+        processed_video_path = "temp"
+        processed_filename = uuid.uuid4().hex + ".webm"
+        
+        processed_video_path.rename(FILE_PATH, "videos", processed_filename)
+        
+
+        # Add processed video to DB
+        c.execute('INSERT INTO processed_videos (folder, filename, O_filename, pair_id) VALUES (?, ?, ?, ?)',
+                  ("videos", processed_filename, unprocessed[3], id))
+        processed_id = c.lastrowid
+
+        # Update unprocessed video with pair_id
+        c.execute('UPDATE unprocessed_videos SET pair_id = ? WHERE id = ?', (processed_id, id))
+        conn.commit()
+
+    return jsonify({"message": "Video processed and linked", "processed_id": processed_id}), 201
 
 def open_browser():
     webbrowser.open("http://127.0.0.1:5000")
