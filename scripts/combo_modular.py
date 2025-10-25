@@ -15,6 +15,7 @@ from gesture_engine import (
     PeaceSignGesture,
     ThumbsUpGesture,
     MiddleFingerGesture,
+    KoreanHeartGesture,
     RecoilMotion,
     ProximityRule,
     GestureTriggerRule,
@@ -96,7 +97,7 @@ def main():
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(
         static_image_mode=False,
-        max_num_hands=4,
+        max_num_hands=99,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5,
     )
@@ -108,11 +109,16 @@ def main():
     # Register all gestures
     engine.register_gesture(Symbol6Gesture())
     engine.register_gesture(Symbol7Gesture(down_cos=0.6))
+    
+    # Korean heart MUST be registered before gun to get priority (both use thumb+index)
+    engine.register_gesture(KoreanHeartGesture(sound_path="./sounds/yippee.mp3", volume=0.8))
     engine.register_gesture(GunPoseGesture())
+    
     engine.register_gesture(OpenPalmGesture())
     engine.register_gesture(FistGesture())
     engine.register_gesture(PeaceSignGesture())
     engine.register_gesture(ThumbsUpGesture())
+    
     # Attach sound directly to the gesture class with a per-gesture volume
     engine.register_gesture(MiddleFingerGesture(sound_path="./sounds/fahh.mp3", volume=1.0))
     
@@ -144,7 +150,8 @@ def main():
     ))
     
     # Register single-gesture trigger rules (emit events directly for gestures)
-    engine.register_gesture_rule(GestureTriggerRule(g="middle_finger"))
+    engine.register_gesture_rule(GestureTriggerRule(g="middle_finger", cooldown_s=1.0))
+    engine.register_gesture_rule(GestureTriggerRule(g="korean_heart", cooldown_s=1.5))  # Longer cooldown for heart
     # Uncomment to add more proximity rules:
     # engine.register_rule(ProximityRule(a="palm", b="fist", threshold=0.15, cooldown_s=0.6))
     # engine.register_rule(ProximityRule(a="peace", b="thumbs_up", threshold=0.15, cooldown_s=0.6))

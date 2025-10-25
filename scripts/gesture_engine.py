@@ -222,7 +222,19 @@ class GunPoseGesture(Gesture):
         pinky_ext = _is_ext(lm_list, "pinky")
         
         # More specific: thumb+index extended, middle+ring+pinky NOT extended
-        return thumb_ext and index_ext and (not middle_ext) and (not ring_ext) and (not pinky_ext)
+        basic_gun = thumb_ext and index_ext and middle_ext and (not ring_ext) and (not pinky_ext)
+        
+        if not basic_gun:
+            return False
+        
+        # Distinguish from Korean heart: gun has tips APART (pointing), heart has tips TOGETHER
+        thumb_tip = np.array([lm_list[4][0], lm_list[4][1]])
+        index_tip = np.array([lm_list[8][0], lm_list[8][1]])
+        scale = _scale(lm_list)
+        tip_distance = euclid_2d((thumb_tip[0], thumb_tip[1]), (index_tip[0], index_tip[1])) / scale
+        
+        # Gun should have tips far apart (> 0.35)
+        return tip_distance > 0.35
 
 
 class OpenPalmGesture(Gesture):
@@ -319,6 +331,51 @@ class MiddleFingerGesture(Gesture):
         )
 
 
+class KoreanHeartGesture(Gesture):
+    """Korean finger heart: thumb and index crossed, other fingers curled."""
+    def __init__(self, cross_threshold: float = 0.40, sound_path: Optional[str] = None, volume: float = 1.0):
+        super().__init__("korean_heart", sound_path=sound_path, volume=volume)
+        self.cross_threshold = cross_threshold
+
+    def detect(self, lm_list) -> bool:
+        # Check that middle, ring, and pinky are curled (strict requirement)
+        middle_ext = _is_ext(lm_list, "middle")
+        ring_ext = _is_ext(lm_list, "ring")
+        pinky_ext = _is_ext(lm_list, "pinky")
+        
+        if middle_ext or ring_ext or pinky_ext:
+            return False
+        
+        # For thumb and index, check if they're at least partially extended
+        # Use a more lenient check: tips should be further from palm than base joints
+        thumb_tip = np.array([lm_list[4][0], lm_list[4][1], lm_list[4][2]])
+        thumb_mcp = np.array([lm_list[2][0], lm_list[2][1], lm_list[2][2]])
+        index_tip = np.array([lm_list[8][0], lm_list[8][1], lm_list[8][2]])
+        index_mcp = np.array([lm_list[5][0], lm_list[5][1], lm_list[5][2]])
+        wrist = np.array([lm_list[0][0], lm_list[0][1], lm_list[0][2]])
+        
+        # Check if tips are further from wrist than their base joints (partial extension)
+        thumb_tip_dist = np.linalg.norm(thumb_tip - wrist)
+        thumb_base_dist = np.linalg.norm(thumb_mcp - wrist)
+        index_tip_dist = np.linalg.norm(index_tip - wrist)
+        index_base_dist = np.linalg.norm(index_mcp - wrist)
+        
+        thumb_extended_enough = thumb_tip_dist > thumb_base_dist * 0.9  # More lenient
+        index_extended_enough = index_tip_dist > index_base_dist * 0.9
+        
+        if not (thumb_extended_enough and index_extended_enough):
+            return False
+        
+        # Key difference from gun: check if thumb and index tips are CLOSE together
+        # Use 2D distance (screen space) for orientation invariance
+        scale = _scale(lm_list)
+        tip_distance = euclid_2d((thumb_tip[0], thumb_tip[1]), (index_tip[0], index_tip[1])) / scale
+        
+        # For Korean heart, the tips should be close (forming the heart point)
+        # Gun pose will have tips far apart (pointing direction)
+        return tip_distance < self.cross_threshold
+
+
 class RecoilMotion(Motion):
     def __init__(self, movement_threshold: float = 0.05, gate_gesture: str = "gun", cooldown_s: float = 0.4, sound_path: Optional[str] = None, volume: float = 1.0):
         super().__init__("recoil", sound_path=sound_path, volume=volume)
@@ -400,8 +457,10 @@ class ProximityRule:
 @dataclass
 class GestureTriggerRule:
     g: str
+    cooldown_s: float = 0.5  # Time-based cooldown per hand to prevent rapid re-triggers
     # Fire once per hand while the gesture remains active (edge-triggered)
     active_hands: Set[int] = field(default_factory=set)
+    last_trigger_time: Dict[int, float] = field(default_factory=dict)
 
     def check(self, detections: Dict[int, Set[str]], now: float) -> List[Dict[str, object]]:
         events: List[Dict[str, object]] = []
@@ -410,8 +469,11 @@ class GestureTriggerRule:
             if self.g in gestures:
                 current_active.add(hid)
                 if hid not in self.active_hands:
-                    # Rising edge: just became active
-                    events.append({"type": self.g, "hand_id": hid})
+                    # Rising edge: check cooldown before firing
+                    last_time = self.last_trigger_time.get(hid, 0.0)
+                    if now - last_time > self.cooldown_s:
+                        events.append({"type": self.g, "hand_id": hid})
+                        self.last_trigger_time[hid] = now
         # Update latch state: keep only those still active
         self.active_hands = current_active
         return events
