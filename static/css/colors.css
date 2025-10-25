@@ -1,13 +1,13 @@
 /* Global color palette */
 :root {
-  --bg: #FFFFFD;
-  --ink: #910D0B;
-  --accent-1: #E80D0B;
-  --accent-2: #F5BDBC;
-  --accent-3: #E6554E;
-  --accent-4: #FE4F0F;
-  --accent-5: #FA9467;
-  --accent-6: #F7B07E;
-  --accent-7: #FFA73C;
-  --accent-8: #F6EFD3;
+  --bg: #fffffd;
+  --ink: #910d0b;
+  --accent-1: #e80d0b;
+  --accent-2: #f5bdbc;
+  --accent-3: #e6554e;
+  --accent-4: #fe4f0f;
+  --accent-5: #fa9467;
+  --accent-6: #f7b07e;
+  --accent-7: #ffa73c;
+  --accent-8: #f6efd3;
 }

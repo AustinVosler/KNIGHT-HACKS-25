@@ -1,0 +1,104 @@
+/* Shared background and swirl styles for all pages */
+
+.page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+html, body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background: linear-gradient(180deg, var(--bg) 0%, #fff 100%);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Swirl decorations using pure CSS */
+.swirl {
+  position: absolute;
+  border-radius: 50% 40% 60% 50% / 60% 50% 40% 50%;
+  opacity: 0.95;
+  pointer-events: none;
+  z-index: 1;
+}
+.swirl-1 {
+  width: 60vw;
+  height: 40vw;
+  top: -10vw;
+  left: -12vw;
+  background: radial-gradient(circle at 40% 60%, var(--accent-4) 60%, var(--accent-1) 100%);
+  transform: rotate(-18deg);
+}
+.swirl-2 {
+  width: 38vw;
+  height: 28vw;
+  top: 8vw;
+  left: 6vw;
+  background: radial-gradient(circle at 60% 40%, var(--accent-5) 60%, var(--accent-2) 100%);
+  transform: rotate(12deg);
+}
+.swirl-3 {
+  width: 54vw;
+  height: 34vw;
+  right: -14vw;
+  bottom: -8vw;
+  background: radial-gradient(circle at 60% 60%, var(--accent-6) 60%, var(--accent-7) 100%);
+  transform: rotate(8deg);
+}
+.swirl-4 {
+  width: 32vw;
+  height: 22vw;
+  right: 4vw;
+  bottom: 10vw;
+  background: radial-gradient(circle at 40% 40%, var(--accent-3) 60%, var(--accent-8) 100%);
+  transform: rotate(-10deg);
+}
+
+/* Swirly retro lines */
+.swirl-line {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 100px;
+  opacity: 0.7;
+}
+.swirl-line-1 {
+  width: 60vw;
+  height: 22px;
+  top: 18vh;
+  left: -8vw;
+  background: linear-gradient(90deg, var(--accent-2) 0%, var(--accent-4) 80%, transparent 100%);
+  transform: rotate(-8deg) skewY(-12deg);
+}
+.swirl-line-2 {
+  width: 48vw;
+  height: 16px;
+  top: 54vh;
+  right: -10vw;
+  background: linear-gradient(90deg, var(--accent-3) 0%, var(--accent-6) 80%, transparent 100%);
+  transform: rotate(12deg) skewY(8deg);
+}
+.swirl-line-3 {
+  width: 38vw;
+  height: 12px;
+  bottom: 12vh;
+  left: 12vw;
+  background: linear-gradient(90deg, var(--accent-5) 0%, var(--accent-7) 80%, transparent 100%);
+  transform: rotate(-16deg) skewY(-6deg);
+}
+
+@media (max-width: 520px) {
+  .page {
+    padding: 1.25rem;
+  }
+  .brand {
+    font-size: 1.375rem;
+  }
+}

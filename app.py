@@ -37,11 +37,11 @@ def add_video(path, O_filename):
 app = Flask(__name__)
 #baka
 
-@app.route('/index')
+@app.route('/')
 def home():
-    return "Hello, Flask!"
+    return render_template('index.html')
 
-@app.route('/api/record')
+@app.route('/record')
 def record():
     return render_template('recorder.html')
 
