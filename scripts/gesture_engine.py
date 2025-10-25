@@ -333,9 +333,10 @@ class MiddleFingerGesture(Gesture):
 
 class KoreanHeartGesture(Gesture):
     """Korean finger heart: thumb and index crossed, other fingers curled."""
-    def __init__(self, cross_threshold: float = 0.40, sound_path: Optional[str] = None, volume: float = 1.0):
+    def __init__(self, cross_threshold: float = 0.40, upward_threshold: float = -0.3, sound_path: Optional[str] = None, volume: float = 1.0):
         super().__init__("korean_heart", sound_path=sound_path, volume=volume)
         self.cross_threshold = cross_threshold
+        self.upward_threshold = upward_threshold  # Y-component threshold (negative = upward in screen coords)
 
     def detect(self, lm_list) -> bool:
         # Check that middle, ring, and pinky are curled (strict requirement)
@@ -364,6 +365,18 @@ class KoreanHeartGesture(Gesture):
         index_extended_enough = index_tip_dist > index_base_dist * 0.9
         
         if not (thumb_extended_enough and index_extended_enough):
+            return False
+        
+        # Check that fingers are generally pointing upward
+        # In screen coordinates, Y increases downward, so upward = negative Y direction
+        # Calculate average direction of thumb and index tips relative to wrist
+        thumb_direction_y = thumb_tip[1] - wrist[1]
+        index_direction_y = index_tip[1] - wrist[1]
+        avg_direction_y = (thumb_direction_y + index_direction_y) / 2.0
+        
+        # If average Y is positive (pointing down), reject
+        # Allow some leniency: upward_threshold = -0.3 means tips should be at least somewhat above wrist
+        if avg_direction_y > self.upward_threshold:
             return False
         
         # Key difference from gun: check if thumb and index tips are CLOSE together
@@ -480,13 +493,16 @@ class GestureTriggerRule:
 
 
 class GestureEngine:
-    def __init__(self, smoother_alpha: float = 0.5):
+    def __init__(self, smoother_alpha: float = 0.5, max_gesture_velocity: float = 0.15):
         self.tracker = SimpleHandTracker()
         self.smoother = LandmarkSmoother(alpha=smoother_alpha)
         self.gestures: List[Gesture] = []
         self.motions: List[Motion] = []
         self.rules: List[ProximityRule] = []
         self.gesture_rules: List[GestureTriggerRule] = []
+        # Motion filtering: prevent gesture detection when hand is moving too fast
+        self.max_gesture_velocity = max_gesture_velocity
+        self.prev_hand_centers: Dict[int, Tuple[Tuple[float, float], float]] = {}  # hand_id -> (center, timestamp)
 
     def register_gesture(self, gesture: Gesture):
         self.gestures.append(gesture)
@@ -529,23 +545,52 @@ class GestureEngine:
                 remaining_ids.discard(best_id)
 
         # Smooth landmarks and run gesture detectors
-        detections: Dict[int, Set[str]] = {}
+        detections: Dict[int, Set[str]] = {}  # For gesture triggers (velocity filtered)
+        motion_detections: Dict[int, Set[str]] = {}  # For motion gating (no velocity filter)
         smoothed: Dict[int, List[Tuple[float, float, float]]] = {}
+        hand_velocities: Dict[int, float] = {}
+        
+        # Calculate velocity for each hand to filter out fast motion
         for idx, hand in enumerate(multi_hand_landmarks):
             hid = idx_to_id.get(idx)
             if hid is None:
                 continue
+            
+            current_center = centers_by_id[hid]
+            velocity = 0.0
+            
+            if hid in self.prev_hand_centers:
+                prev_center, prev_time = self.prev_hand_centers[hid]
+                dt = now - prev_time
+                if dt > 0.001:  # Avoid division by zero
+                    dx = current_center[0] - prev_center[0]
+                    dy = current_center[1] - prev_center[1]
+                    velocity = math.sqrt(dx*dx + dy*dy) / dt
+            
+            hand_velocities[hid] = velocity
+            self.prev_hand_centers[hid] = (current_center, now)
+            
+            # Smooth landmarks
             sm = self.smoother.smooth(hid, hand.landmark)
             smoothed[hid] = sm
-            hits: Set[str] = set()
+            
+            # Run gesture detection twice:
+            # 1. For motion gating (no velocity filter) - motions need to detect gestures even when moving
+            motion_hits: Set[str] = set()
             for g in self.gestures:
                 if g.detect(sm):
-                    hits.add(g.name)
-            detections[hid] = hits
+                    motion_hits.add(g.name)
+            motion_detections[hid] = motion_hits
+            
+            # 2. For gesture triggers/proximity (velocity filtered) - only detect when hand is still
+            gesture_hits: Set[str] = set()
+            if velocity < self.max_gesture_velocity:
+                gesture_hits = motion_hits.copy()  # Copy the unfiltered detections
+            detections[hid] = gesture_hits
 
-        # Motions
+        # Motions - use motion_detections (unfiltered) for gating
         for hid, sm in smoothed.items():
-            hits = detections.get(hid, set())
+            hits = motion_detections.get(hid, set())  # Changed from detections to motion_detections
             for m in self.motions:
                 if m.update(hid, sm, now, hits):
                     results["events"].append({"type": m.name, "hand_id": hid})

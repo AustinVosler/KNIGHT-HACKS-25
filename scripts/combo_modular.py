@@ -104,14 +104,16 @@ def main():
     mp_draw = mp.solutions.drawing_utils
 
     # Engine and detectors
-    engine = GestureEngine(smoother_alpha=0.5)
+    # max_gesture_velocity: prevent gesture detection when hand is moving too fast (normalized units/second)
+    # Lower = stricter (only detect on very still hands), Higher = more lenient
+    engine = GestureEngine(smoother_alpha=0.5, max_gesture_velocity=0.15)
     
     # Register all gestures
     engine.register_gesture(Symbol6Gesture())
     engine.register_gesture(Symbol7Gesture(down_cos=0.6))
     
     # Korean heart MUST be registered before gun to get priority (both use thumb+index)
-    engine.register_gesture(KoreanHeartGesture(sound_path="./sounds/yippee.mp3", volume=0.8))
+    engine.register_gesture(KoreanHeartGesture(sound_path="./sounds/kpop.mp3", volume=0.8))
     engine.register_gesture(GunPoseGesture())
     
     engine.register_gesture(OpenPalmGesture())
@@ -128,7 +130,7 @@ def main():
         gate_gesture="gun", 
         cooldown_s=0.6,
         sound_path="./sounds/bang.mp3",
-        volume=1.0
+        volume=0.6
     ))
     
     # Register proximity rules with sounds
@@ -138,7 +140,7 @@ def main():
         threshold=0.50, 
         cooldown_s=0.6,
         sound_path="./sounds/67.mp3",
-        volume=.20
+        volume=0.1
     ))
     engine.register_rule(ProximityRule(
         a="thumbs_up", 
@@ -146,7 +148,7 @@ def main():
         threshold=0.30, 
         cooldown_s=0.6,
         sound_path="./sounds/yippee.mp3",
-        volume=1.0
+        volume=0.7
     ))
     
     # Register single-gesture trigger rules (emit events directly for gestures)
