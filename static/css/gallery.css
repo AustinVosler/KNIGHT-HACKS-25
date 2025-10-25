@@ -6,7 +6,10 @@
   margin-top: 2.5rem;
   padding: 0 2vw;
 }
+/* Ensure video cards display above background elements */
 .video-card {
+  position: relative;
+  z-index: 1;
   background: rgba(255,255,255,0.85);
   border-radius: 14px;
   box-shadow: 0 4px 18px rgba(16,24,40,0.10);

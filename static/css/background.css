@@ -20,13 +20,12 @@ body {
   justify-content: center;
 }
 
-/* Swirl decorations using pure CSS */
 .swirl {
   position: absolute;
   border-radius: 50% 40% 60% 50% / 60% 50% 40% 50%;
   opacity: 0.95;
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 .swirl-1 {
   width: 60vw;
@@ -62,10 +61,11 @@ body {
 }
 
 /* Swirly retro lines */
+/* Swirly retro lines */
 .swirl-line {
   position: absolute;
   pointer-events: none;
-  z-index: 2;
+  z-index: 0;
   border-radius: 100px;
   opacity: 0.7;
 }

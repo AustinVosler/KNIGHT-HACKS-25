@@ -10,8 +10,12 @@
   </head>
   <body>
     <main class="page">
-
-      
+      <!-- Top left navigation buttons -->
+      <nav class="top-nav">
+        <a href="/record" class="nav-btn">Record</a>
+        <a href="/gallery" class="nav-btn">Gallery</a>
+        <a href="/about" class="nav-btn">About</a>
+      </nav>
 
       <div class="swirl swirl-1" aria-hidden="true"></div>
       <div class="swirl swirl-2" aria-hidden="true"></div>
@@ -25,5 +29,32 @@
       </div>
     </main>
     {% block scripts %}{% endblock %}
+    <style>
+      .top-nav {
+        position: absolute;
+        top: 1.5rem;
+        left: 1.5rem;
+        display: flex;
+        gap: 1rem;
+        z-index: 2;
+      }
+      .nav-btn {
+        background: #fff;
+        color: var(--ink);
+        border: none;
+        border-radius: 0.75rem;
+        padding: 0.5rem 1.25rem;
+        font-size: 1rem;
+        font-weight: 500;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        transition: background 0.2s, color 0.2s;
+        cursor: pointer;
+      }
+      .nav-btn:hover {
+        background: var(--bg);
+        color: var(--accent-4);
+      }
+    </style>
   </body>
 </html>
