@@ -76,7 +76,7 @@ def trimming():
 def list_videos():
     with database_connection() as conn:
         c = conn.cursor()
-        c.execute('SELECT * FROM videos')
+        c.execute('SELECT * FROM processed_videos')
         videos = c.fetchall()
         return jsonify(videos)
     
@@ -94,7 +94,7 @@ def add_video_route():
 def send_video(id):
     with database_connection() as conn:
         c = conn.cursor()
-        c.execute('SELECT * FROM videos WHERE id = ?', (id,))
+        c.execute('SELECT * FROM processed_videos WHERE id = ?', (id,))
         video = c.fetchone()
         if not video:
             return jsonify({"error": "Video not found"}), 404
@@ -105,7 +105,7 @@ def send_video(id):
 def save_video(id):
     with database_connection() as conn:
         c = conn.cursor()
-        c.execute('SELECT * FROM videos WHERE id = ?', (id,))
+        c.execute('SELECT * FROM unprocessed_videos WHERE id = ?', (id,))
         video = c.fetchone()
         if not video:
             return jsonify({"error": "Video not found"}), 404
@@ -129,9 +129,9 @@ def save_video(id):
 def delete_video(id):
     with database_connection() as conn:
         c = conn.cursor()
-        c.execute('SELECT * FROM videos WHERE id = ?', (id,))
+        c.execute('SELECT * FROM processed_videos WHERE id = ?', (id,))
         video = c.fetchone()
-        c.execute('DELETE FROM videos WHERE id = ?', (id,))
+        c.execute('DELETE FROM processed_videos WHERE id = ?', (id,))
         conn.commit()
     path = os.path.join(FILE_PATH, "videos", video.filename)
     if os.path.exists(path):
