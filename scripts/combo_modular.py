@@ -438,6 +438,7 @@ def video_upload(filename):
     # Register single-gesture trigger rules (emit events directly for gestures)
     engine.register_gesture_rule(GestureTriggerRule(g="middle_finger", cooldown_s=1.0))
     engine.register_gesture_rule(GestureTriggerRule(g="korean_heart", cooldown_s=1.5))  # Longer cooldown for heart
+    engine.register_gesture_rule(GestureTriggerRule(g="palm", cooldown_s=1.0))
     # Uncomment to add more proximity rules:
     # engine.register_rule(ProximityRule(a="palm", b="fist", threshold=0.15, cooldown_s=0.6))
     # engine.register_rule(ProximityRule(a="peace", b="thumbs_up", threshold=0.15, cooldown_s=0.6))
@@ -449,27 +450,22 @@ def video_upload(filename):
         return
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     # STORE SOUND EVENTS WITH TIMESTAMPS
     sound_events = []  # List of tuples (time_in_seconds, sound_path, volume)
     frame_idx = 0
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print("Scanning for hand events to place audio overlays...")
-
-
-
-
+    print(f"Scanning for hand events to place audio overlays... (Total frames: {total_frames}, FPS: {fps})")
 
     while True:
         ok, frame = cap.read()
         if not ok:
-            print("Failed to capture frame")
             break
 
-        frame_idx += 1
         # Prefer precise timestamp from the file if available; fallback to frame index
         pos_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
         time_s = (pos_ms / 1000.0) if pos_ms and pos_ms > 0 else (frame_idx / float(fps))
+        
         # IMPORTANT: Do NOT flip or draw on frames; visuals must remain unchanged
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         result = hands.process(rgb)
@@ -477,17 +473,13 @@ def video_upload(filename):
         events = []
         if result.multi_hand_landmarks:
             # Run engine (no drawing)
-            for h in result.multi_hand_landmarks:
-                pass
             out = engine.process(result.multi_hand_landmarks)
             events = out["events"]
             
             # Debug: print events as they happen
             if events:
                 for e in events:
-                    print(f"Event detected: {e}")
-
-            # No visual overlays; we only need event timestamps
+                    print(f"Event detected at {time_s:.2f}s: {e}")
 
         # -------------------- EVENT REACTION --------------------
         for e in events:
@@ -521,27 +513,17 @@ def video_upload(filename):
                     for p in paths:
                         sound_events.append((time_s, p, rule.volume))
 
-            # Visual feedback on screen
-            # if played:
-            #     cv2.putText(frame, etype.upper(), (30, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 3, cv2.LINE_AA)
-
-        # cv2.imshow("Modular Combo: Engine Demo", frame)
-        # key = cv2.waitKey(1) & 0xFF
-        # if key == ord('q'):
-        #     break
-        
-
-        # Do not write frames; we keep visuals untouched
+        frame_idx += 1
 
     cap.release()
-    cv2.destroyAllWindows()
-    # pygame.mixer.quit()
+    print(f"Processed {frame_idx} frames. Found {len(sound_events)} sound events.")
 
     # -------------------- POST-PROCESS AUDIO --------------------
     print("Combining detected sounds with the original video...")
 
     # Load original video (for its visuals and existing audio track)
     base_clip = VideoFileClip(filename)
+    video_duration = base_clip.duration
 
     # Create audio clips for all sound events
     audio_clips = []
@@ -549,6 +531,7 @@ def video_upload(filename):
         try:
             snd = AudioFileClip(path).volumex(vol).set_start(t)
             audio_clips.append(snd)
+            print(f"Adding sound at {t:.2f}s: {os.path.basename(path)} (vol={vol})")
         except Exception as e:
             print(f"Could not load sound {path}: {e}")
 
@@ -556,16 +539,36 @@ def video_upload(filename):
     if base_clip.audio:
         final_audio = CompositeAudioClip([base_clip.audio] + audio_clips)
     else:
-        final_audio = CompositeAudioClip(audio_clips)
+        if audio_clips:
+            final_audio = CompositeAudioClip(audio_clips)
+        else:
+            final_audio = None
 
     # Merge final audio into the ORIGINAL video visuals (no visual changes)
-    final_clip = base_clip.set_audio(final_audio)
+    if final_audio:
+        # Set duration to match video to prevent extra frames
+        final_audio = final_audio.set_duration(video_duration)
+        final_clip = base_clip.set_audio(final_audio)
+    else:
+        final_clip = base_clip
 
     # Save final video with embedded sound effects next to original
     base, _ = os.path.splitext(os.path.basename(filename))
     out_dir = os.path.dirname(filename) or "."
     output_path = os.path.join(out_dir, f"{base}_sfx.mp4")
-    final_clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
+    
+    # Use preset and threads for better performance and quality
+    # fps='source' ensures we maintain exact original framerate
+    final_clip.write_videofile(
+        output_path, 
+        codec="libx264", 
+        audio_codec="aac",
+        fps=fps,  # Use detected FPS from original
+        preset='medium',  # Balance between speed and quality
+        threads=4,  # Use multiple threads for encoding
+        verbose=False,  # Reduce console spam
+        logger=None  # Suppress progress bars for cleaner output
+    )
     
     # Close clips to release resources (Windows file locks)
     final_clip.close()
@@ -582,4 +585,4 @@ def video_upload(filename):
 
 if __name__ == "__main__":
     #main()
-    video_upload("./videos/1.webm")
+    video_upload("./videos/2.webm")
