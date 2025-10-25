@@ -132,7 +132,7 @@ def main():
         threshold=0.50, 
         cooldown_s=0.6,
         sound_path="./sounds/67.mp3",
-        volume=1.0
+        volume=.20
     ))
     engine.register_rule(ProximityRule(
         a="thumbs_up", 
