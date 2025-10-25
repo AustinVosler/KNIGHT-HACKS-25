@@ -35,7 +35,8 @@ def add_video(path, O_filename):
         return c.lastrowid
 
 app = Flask(__name__)
-#baka
+
+### ROUTES ###
 
 @app.route('/')
 def home():
@@ -44,6 +45,12 @@ def home():
 @app.route('/record')
 def record():
     return render_template('recorder.html')
+
+@app.route('/gallery')
+def gallery():
+    return render_template('gallery.html')
+
+### API ENDPOINTS ###
 
 @app.route('/api/data', methods=['GET'])
 def get_data():

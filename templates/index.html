@@ -1,38 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Base Page</title>
-  <link rel="stylesheet" href="/static/css/colors.css" />
-  <link rel="stylesheet" href="/static/css/background.css" />
-  <link rel="stylesheet" href="/static/css/index.css" />
-  </head>
-  <body>
-    <main class="page">
-      <div class="swirl swirl-1" aria-hidden="true"></div>
-      <div class="swirl swirl-2" aria-hidden="true"></div>
-      <div class="swirl swirl-3" aria-hidden="true"></div>
-      <div class="swirl swirl-4" aria-hidden="true"></div>
-      <div class="swirl-line swirl-line-1" aria-hidden="true"></div>
-      <div class="swirl-line swirl-line-2" aria-hidden="true"></div>
-      <div class="swirl-line swirl-line-3" aria-hidden="true"></div>
+{% extends "base.html" %}
 
-      <div class="center-content">
-        <h1 class="brand">Gesture Demo</h1>
-        <form action="/record" method="get">
-          <button class="cta" id="actionBtn" type="submit">Start</button>
-        </form>
-      </div>
-    </main>
+{% block title %}Base Page{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/index.css" />{% endblock %}
 
-    <script>
-      document
-        .getElementById("actionBtn")
-        ?.addEventListener("click", function () {
-          this.classList.add("pushed");
-          setTimeout(() => this.classList.remove("pushed"), 250);
-        });
-    </script>
-  </body>
-</html>
+{% block content %}
+  <h1 class="brand">Gesture Demo</h1>
+  <form action="/record" method="get">
+    <button class="cta" id="actionBtn" type="submit">Start</button>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document
+    .getElementById("actionBtn")
+    ?.addEventListener("click", function () {
+      this.classList.add("pushed");
+      setTimeout(() => this.classList.remove("pushed"), 250);
+    });
+</script>
+{% endblock %}
