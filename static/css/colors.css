@@ -1,0 +1,13 @@
+/* Global color palette */
+:root {
+  --bg: #FFFFFD;
+  --ink: #910D0B;
+  --accent-1: #E80D0B;
+  --accent-2: #F5BDBC;
+  --accent-3: #E6554E;
+  --accent-4: #FE4F0F;
+  --accent-5: #FA9467;
+  --accent-6: #F7B07E;
+  --accent-7: #FFA73C;
+  --accent-8: #F6EFD3;
+}

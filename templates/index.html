@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>Base Page</title>
+		<link rel="stylesheet" href="/static/css/colors.css" />
+		<link rel="stylesheet" href="/static/css/index.css" />
+	</head>
+	<body>
+		<main class="page">
+			<div class="decor top-left" aria-hidden="true"></div>
+			<div class="decor bottom-right" aria-hidden="true"></div>
+
+			<section class="card">
+				<h1 class="brand">Gesture Demo</h1>
+				<p class="lead">A tiny demo page with a styled button and decorative accents.</p>
+				<button class="cta" id="actionBtn">Click Me</button>
+			</section>
+		</main>
+
+		<script>
+			document.getElementById('actionBtn')?.addEventListener('click', function(){
+				this.classList.add('pushed');
+				setTimeout(()=> this.classList.remove('pushed'), 250);
+			});
+		</script>
+	</body>
+</html>
