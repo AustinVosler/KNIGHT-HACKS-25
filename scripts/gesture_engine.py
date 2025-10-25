@@ -1,3 +1,24 @@
+"""
+Gesture Engine - Modular Hand Gesture and Motion Detection System
+
+This module provides a flexible framework for detecting hand gestures and motions using
+MediaPipe Hands. It supports:
+- Multiple gesture types (static poses like thumbs up, peace sign, Korean heart, etc.)
+- Motion detection (like recoil/gun firing)
+- Proximity rules (detecting when two gestures are near each other)
+- Gesture trigger rules (single-gesture events with cooldown)
+- Motion filtering (prevent false positives during fast hand movement)
+- Stable hand tracking across frames
+- Landmark smoothing for temporal stability
+
+Architecture:
+- Gesture: Base class for static hand poses
+- Motion: Base class for temporal patterns (movement-based)
+- ProximityRule: Detects when two gestures are close together
+- GestureTriggerRule: Emits events for single gestures with cooldown
+- GestureEngine: Orchestrates detection and event emission
+"""
+
 import math
 import time
 from dataclasses import dataclass, field
@@ -9,6 +30,15 @@ import numpy as np
 # --------- Utility functions ---------
 
 def _safe_unit(v: np.ndarray) -> np.ndarray:
+    """
+    Normalize a vector to unit length, handling zero vectors safely.
+    
+    Args:
+        v: Input vector (numpy array)
+    
+    Returns:
+        Unit vector in the same direction, or the original vector if magnitude is zero
+    """
     n = np.linalg.norm(v)
     if n == 0:
         return v
@@ -16,15 +46,48 @@ def _safe_unit(v: np.ndarray) -> np.ndarray:
 
 
 def euclid_2d(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
+    """
+    Calculate Euclidean distance between two 2D points.
+    
+    Args:
+        p1: First point (x, y)
+        p2: Second point (x, y)
+    
+    Returns:
+        Distance between the points
+    """
     return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
 
 
 def hand_center(lm) -> Tuple[float, float]:
+    """
+    Get the center position of a hand (wrist landmark).
+    
+    Args:
+        lm: MediaPipe hand landmarks
+    
+    Returns:
+        (x, y) coordinates of the wrist
+    """
     w = lm[0]
     return (w.x, w.y)
 
 
 def is_finger_extended_3d(landmarks, finger_indices: List[int], threshold: float = 0.8) -> bool:
+    """
+    Determine if a finger is extended by checking joint alignment in 3D.
+    
+    Uses dot products between consecutive bone segments. If joints are aligned
+    (dot product > threshold), the finger is considered extended.
+    
+    Args:
+        landmarks: MediaPipe hand landmarks
+        finger_indices: List of 4 landmark indices for the finger [mcp, pip, dip, tip]
+        threshold: Alignment threshold (0.0 to 1.0, higher = stricter)
+    
+    Returns:
+        True if the finger is extended, False otherwise
+    """
     points = [
         np.array([landmarks[i].x, landmarks[i].y, landmarks[i].z])
         for i in finger_indices
@@ -39,21 +102,56 @@ def is_finger_extended_3d(landmarks, finger_indices: List[int], threshold: float
 
 @dataclass
 class HandTrack:
+    """
+    Represents a tracked hand with a stable ID across frames.
+    
+    Attributes:
+        id: Unique identifier for this hand
+        center: Current (x, y) position of the hand center
+        last_update: Timestamp of the last update
+    """
     id: int
     center: Tuple[float, float]
     last_update: float
 
 
 class SimpleHandTracker:
-    """Assigns stable IDs by nearest-neighbor association across frames."""
+    """
+    Assigns stable IDs to hands across frames using nearest-neighbor matching.
+    
+    This tracker maintains hand identity over time, allowing gesture and motion
+    detectors to track individual hands reliably. Uses greedy nearest-neighbor
+    matching with distance thresholds.
+    
+    Attributes:
+        max_lost_time: Maximum time (seconds) before a lost hand is removed
+        match_threshold: Maximum distance for matching a detection to an existing track
+    """
 
     def __init__(self, max_lost_time: float = 1.0, match_threshold: float = 0.2):
+        """
+        Initialize the hand tracker.
+        
+        Args:
+            max_lost_time: Time in seconds before culling a lost hand
+            match_threshold: Maximum normalized distance for matching
+        """
         self._next_id = 1
         self._tracks: Dict[int, HandTrack] = {}
         self._max_lost_time = max_lost_time
         self._match_threshold = match_threshold
 
     def update(self, centers: List[Tuple[float, float]], now: float) -> Dict[int, Tuple[float, float]]:
+        """
+        Update tracking with new hand detections.
+        
+        Args:
+            centers: List of hand center positions in current frame
+            now: Current timestamp
+        
+        Returns:
+            Dictionary mapping hand IDs to their centers
+        """
         # Mark all tracks as unmatched initially
         unmatched_tracks: Set[int] = set(self._tracks.keys())
         assignments: Dict[int, Tuple[float, float]] = {}
@@ -89,13 +187,37 @@ class SimpleHandTracker:
 
 
 class LandmarkSmoother:
-    """Exponential moving average per hand ID for landmark smoothing."""
+    """
+    Applies exponential moving average (EMA) smoothing to hand landmarks.
+    
+    Reduces jitter and noise in landmark positions across frames, improving
+    stability of gesture detection. Maintains separate smoothing state per hand ID.
+    
+    Attributes:
+        alpha: Smoothing factor (0.0 = no update, 1.0 = no smoothing)
+    """
 
     def __init__(self, alpha: float = 0.5):
+        """
+        Initialize the landmark smoother.
+        
+        Args:
+            alpha: Smoothing factor, higher = more responsive but less smooth
+        """
         self.alpha = alpha
         self.prev: Dict[int, List[Tuple[float, float, float]]] = {}
 
     def smooth(self, hand_id: int, lm) -> List[Tuple[float, float, float]]:
+        """
+        Apply EMA smoothing to landmarks for a specific hand.
+        
+        Args:
+            hand_id: Unique identifier for the hand
+            lm: MediaPipe hand landmarks
+        
+        Returns:
+            List of smoothed (x, y, z) landmark coordinates
+        """
         pts = [(p.x, p.y, p.z) for p in lm]
         if hand_id not in self.prev:
             self.prev[hand_id] = pts
@@ -113,9 +235,29 @@ class LandmarkSmoother:
 # --------- Gesture and Motion base classes ---------
 
 class Gesture:
+    """
+    Base class for static hand gesture detection.
+    
+    Gestures are hand poses (like thumbs up, peace sign, Korean heart) that
+    are detected based on finger positions in a single frame. Subclasses
+    implement the detect() method to check for specific hand configurations.
+    
+    Attributes:
+        name: Unique identifier for this gesture type
+        sound_path: Optional path to sound file to play when detected
+        volume: Playback volume (0.0 to 1.0)
+    """
     name: str
 
     def __init__(self, name: str, sound_path: Optional[str] = None, volume: float = 1.0):
+        """
+        Initialize a gesture detector.
+        
+        Args:
+            name: Unique name for this gesture
+            sound_path: Optional path to sound file
+            volume: Playback volume (0.0 to 1.0), will be clamped
+        """
         self.name = name
         # Optional per-gesture sound metadata (played by the app)
         self.sound_path: Optional[str] = sound_path
@@ -123,13 +265,42 @@ class Gesture:
         self.volume: float = max(0.0, min(1.0, volume))
 
     def detect(self, lm_list: List[Tuple[float, float, float]]) -> bool:
+        """
+        Detect if this gesture is present in the given hand landmarks.
+        
+        Args:
+            lm_list: List of 21 hand landmarks as (x, y, z) tuples
+        
+        Returns:
+            True if gesture is detected, False otherwise
+        """
         raise NotImplementedError
 
 
 class Motion:
+    """
+    Base class for temporal motion detection.
+    
+    Motions are patterns that occur over time (like recoil/gun firing) and
+    may depend on both hand pose and movement. Maintains state per hand ID
+    to track motion across frames.
+    
+    Attributes:
+        name: Unique identifier for this motion type
+        sound_path: Optional path to sound file to play when triggered
+        volume: Playback volume (0.0 to 1.0)
+    """
     name: str
 
     def __init__(self, name: str, sound_path: Optional[str] = None, volume: float = 1.0):
+        """
+        Initialize a motion detector.
+        
+        Args:
+            name: Unique name for this motion
+            sound_path: Optional path to sound file
+            volume: Playback volume (0.0 to 1.0), will be clamped
+        """
         self.name = name
         # Optional per-motion sound metadata (played by the app)
         self.sound_path: Optional[str] = sound_path
@@ -137,22 +308,44 @@ class Motion:
         self.volume: float = max(0.0, min(1.0, volume))
 
     def update(self, hand_id: int, lm_list: List[Tuple[float, float, float]], now: float, gesture_hits: Set[str]) -> bool:
-        """Return True when motion is triggered for this hand in this frame."""
+        """
+        Update motion state and check if motion is triggered.
+        
+        Args:
+            hand_id: Unique identifier for the hand
+            lm_list: List of 21 hand landmarks as (x, y, z) tuples
+            now: Current timestamp
+            gesture_hits: Set of gesture names currently detected on this hand
+        
+        Returns:
+            True if motion is triggered this frame, False otherwise
+        """
         raise NotImplementedError
 
 
 # --------- Example gestures and motions ---------
 
+# MediaPipe hand landmark indices for each finger
 FINGER_INDICES = {
-    "thumb": [1, 2, 3, 4],
-    "index": [5, 6, 7, 8],
-    "middle": [9, 10, 11, 12],
-    "ring": [13, 14, 15, 16],
-    "pinky": [17, 18, 19, 20],
+    "thumb": [1, 2, 3, 4],    # CMC, MCP, IP, TIP
+    "index": [5, 6, 7, 8],     # MCP, PIP, DIP, TIP
+    "middle": [9, 10, 11, 12], # MCP, PIP, DIP, TIP
+    "ring": [13, 14, 15, 16],  # MCP, PIP, DIP, TIP
+    "pinky": [17, 18, 19, 20], # MCP, PIP, DIP, TIP
 }
 
 
 def _is_ext(lm_list, name: str) -> bool:
+    """
+    Check if a finger is extended using 3D landmark positions.
+    
+    Args:
+        lm_list: List of (x, y, z) landmark tuples
+        name: Finger name ("thumb", "index", "middle", "ring", "pinky")
+    
+    Returns:
+        True if the finger is extended, False if curled
+    """
     # Convert back to a simple structure expected by is_finger_extended_3d
     class P:
         def __init__(self, x, y, z):
@@ -163,13 +356,31 @@ def _is_ext(lm_list, name: str) -> bool:
 
 
 def _scale(lm_list) -> float:
+    """
+    Calculate a normalization scale based on hand size.
+    
+    Uses the distance between index MCP (5) and pinky MCP (17) as a
+    rough measure of hand width for scale-invariant distance comparisons.
+    
+    Args:
+        lm_list: List of (x, y, z) landmark tuples
+    
+    Returns:
+        Normalized scale factor (minimum 1e-3 to avoid division by zero)
+    """
     a = lm_list[5]
     b = lm_list[17]
     return max(euclid_2d((a[0], a[1]), (b[0], b[1])), 1e-3)
 
 
 class Symbol6Gesture(Gesture):
-    """Thumb and index forming circle, other 3 fingers extended."""
+    """
+    Detects the "6" or "OK" gesture: thumb and index forming a circle, other fingers extended.
+    
+    This gesture requires:
+    - Thumb tip and index tip close together (pinched)
+    - Middle, ring, and pinky fingers extended
+    """
     def __init__(self, pinch_threshold: float = 0.60, sound_path: Optional[str] = None, volume: float = 1.0):
         super().__init__("six", sound_path=sound_path, volume=volume)
         self.pinch_threshold = pinch_threshold
@@ -189,6 +400,14 @@ class Symbol6Gesture(Gesture):
 
 
 class Symbol7Gesture(Gesture):
+    """
+    Detects the "7" gesture: thumb and index extended with index pointing downward.
+    
+    This gesture requires:
+    - Thumb and index extended
+    - Index finger pointing downward (negative Y direction in screen space)
+    - Middle, ring, and pinky fingers curled
+    """
     def __init__(self, down_cos: float = 0.6, sound_path: Optional[str] = None, volume: float = 1.0):
         super().__init__("seven", sound_path=sound_path, volume=volume)
         self.down_cos = down_cos
@@ -210,6 +429,16 @@ class Symbol7Gesture(Gesture):
 
 
 class GunPoseGesture(Gesture):
+    """
+    Detects the gun/pistol hand gesture: thumb and index extended (pointing), others curled.
+    
+    This gesture requires:
+    - Thumb and index extended
+    - Middle, ring, and pinky curled
+    - Tips far apart (> 0.35 normalized distance) to distinguish from Korean heart
+    
+    Commonly used for trigger-based interactions like the recoil motion.
+    """
     def __init__(self, sound_path: Optional[str] = None, volume: float = 1.0):
         super().__init__("gun", sound_path=sound_path, volume=volume)
 
@@ -318,11 +547,6 @@ class MiddleFingerGesture(Gesture):
         super().__init__("middle_finger", sound_path=sound_path, volume=volume)
 
     def detect(self, lm_list) -> bool:
-        print(not _is_ext(lm_list, "index")
-            and _is_ext(lm_list, "middle")
-            and not _is_ext(lm_list, "ring")
-            and not _is_ext(lm_list, "pinky")
-        )
         return (
             not _is_ext(lm_list, "index")
             and _is_ext(lm_list, "middle")
@@ -332,7 +556,17 @@ class MiddleFingerGesture(Gesture):
 
 
 class KoreanHeartGesture(Gesture):
-    """Korean finger heart: thumb and index crossed, other fingers curled."""
+    """
+    Detects the Korean finger heart gesture: thumb and index crossed/touching, others curled.
+    
+    This gesture requires:
+    - Thumb and index tips close together (< 0.40 normalized distance)
+    - Middle, ring, and pinky curled
+    - Fingers pointing generally upward (tips above wrist)
+    - Tips far apart distinguishes from gun pose
+    
+    Popular in Korean pop culture for expressing affection.
+    """
     def __init__(self, cross_threshold: float = 0.40, upward_threshold: float = -0.3, sound_path: Optional[str] = None, volume: float = 1.0):
         super().__init__("korean_heart", sound_path=sound_path, volume=volume)
         self.cross_threshold = cross_threshold
@@ -390,6 +624,17 @@ class KoreanHeartGesture(Gesture):
 
 
 class RecoilMotion(Motion):
+    """
+    Detects recoil/gun-firing motion: wrist movement while holding a specific gesture.
+    
+    This motion detector:
+    - Requires a gate gesture (typically "gun") to be held
+    - Tracks wrist movement when gesture is active
+    - Triggers when movement exceeds threshold
+    - Has per-hand cooldown to prevent spam
+    
+    Commonly used for gun-firing interactions in games.
+    """
     def __init__(self, movement_threshold: float = 0.05, gate_gesture: str = "gun", cooldown_s: float = 0.4, sound_path: Optional[str] = None, volume: float = 1.0):
         super().__init__("recoil", sound_path=sound_path, volume=volume)
         self.movement_threshold = movement_threshold
@@ -426,6 +671,21 @@ class RecoilMotion(Motion):
 
 @dataclass
 class ProximityRule:
+    """
+    Detects when two specific gestures are close together in space.
+    
+    Useful for creating interaction patterns like:
+    - Two hands making the same gesture and touching
+    - Different gestures on two hands coming together
+    
+    Attributes:
+        a: Name of first gesture
+        b: Name of second gesture (can be same as 'a')
+        threshold: Maximum normalized distance between hand centers
+        cooldown_s: Minimum time between consecutive triggers
+        sound_path: Optional sound file for this proximity event
+        volume: Playback volume (0.0 to 1.0)
+    """
     a: str
     b: str
     threshold: float = 0.18
@@ -469,8 +729,22 @@ class ProximityRule:
 
 @dataclass
 class GestureTriggerRule:
+    """
+    Emits events for single gestures with edge-triggering and cooldown.
+    
+    Fires once when a gesture is first detected on a hand (rising edge),
+    then requires both:
+    1. Gesture to be released and re-made
+    2. Cooldown period to elapse
+    
+    Prevents spam from detection flicker and ensures intentional triggers.
+    
+    Attributes:
+        g: Name of gesture to trigger on
+        cooldown_s: Minimum time between triggers per hand
+    """
     g: str
-    cooldown_s: float = 0.5  # Time-based cooldown per hand to prevent rapid re-triggers
+    cooldown_s: float = 1.0  # Time-based cooldown per hand to prevent rapid re-triggers
     # Fire once per hand while the gesture remains active (edge-triggered)
     active_hands: Set[int] = field(default_factory=set)
     last_trigger_time: Dict[int, float] = field(default_factory=dict)
@@ -493,7 +767,30 @@ class GestureTriggerRule:
 
 
 class GestureEngine:
+    """
+    Main orchestrator for hand gesture and motion detection.
+    
+    The GestureEngine:
+    - Maintains stable hand tracking across frames
+    - Applies landmark smoothing for noise reduction
+    - Runs gesture detection with motion filtering (prevents false positives during fast movement)
+    - Runs motion detection (uses unfiltered gestures for gating)
+    - Evaluates proximity rules between hands
+    - Evaluates single-gesture trigger rules
+    - Emits events for all detected patterns
+    
+    Attributes:
+        smoother_alpha: EMA smoothing factor (0.0 to 1.0)
+        max_gesture_velocity: Maximum hand speed for gesture detection (normalized units/sec)
+    """
     def __init__(self, smoother_alpha: float = 0.5, max_gesture_velocity: float = 0.15):
+        """
+        Initialize the gesture engine.
+        
+        Args:
+            smoother_alpha: Smoothing factor for landmarks (higher = more responsive)
+            max_gesture_velocity: Maximum hand velocity for gesture detection (prevents false positives)
+        """
         self.tracker = SimpleHandTracker()
         self.smoother = LandmarkSmoother(alpha=smoother_alpha)
         self.gestures: List[Gesture] = []
@@ -517,6 +814,17 @@ class GestureEngine:
         self.gesture_rules.append(rule)
 
     def process(self, multi_hand_landmarks) -> Dict[str, List]:
+        """
+        Process detected hands and emit events for gestures, motions, and rules.
+        
+        Args:
+            multi_hand_landmarks: MediaPipe multi_hand_landmarks from Hands.process()
+        
+        Returns:
+            Dictionary with:
+            - "events": List of event dicts (type, hand_id, etc.)
+            - "overlays": List of debug info (detections, centers per frame)
+        """
         now = time.time()
         results: Dict[str, List] = {"events": [], "overlays": []}
 
