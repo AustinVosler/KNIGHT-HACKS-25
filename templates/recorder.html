@@ -15,16 +15,24 @@
   <div class="recorder-actions">
     <button class="cta recorder-btn" id="recordBtn">Start Recording</button>
   </div>
+  <form id="uploadForm">
+    <input type="text" id="filename" name="filename" placeholder="Enter a name" required />
+    <button type="submit" class="cta uploadForm">Upload Video</button>
+  </form>
 {% endblock %}
 
 {% block scripts %}
 <script>
   const preview = document.getElementById("preview");
   const recordBtn = document.getElementById("recordBtn");
+  const uploadForm = document.getElementById("uploadForm");
+
+  uploadForm.classList.add("hidden");
 
   let mediaRecorder;
   let recordedChunks = [];
   let isRecording = false;
+  let id = null;
 
   let videoFile;
 
@@ -44,18 +52,8 @@
         const blob = new Blob(recordedChunks, { type: "video/webm" });
         recordedChunks = [];
 
-        let fileName = prompt("Enter a name for your masterpiece:", "my_video");
-        if (!fileName) {
-          fileName = "untitled_video";
-        }
-
-        // Make sure filename ends with .webm
-        if (!fileName.endsWith(".webm")) {
-          fileName += ".webm";
-        }
-
         // Upload video to server
-        videoFile = new File([blob], fileName, { type: 'video/webm' });
+        videoFile = new File([blob], "blob.webm", { type: 'video/webm' });
         const formData = new FormData();
         formData.append('file', videoFile);
 
@@ -63,7 +61,7 @@
           method: 'POST',
           body: formData
         }).then(response => {
-          alert('Video uploaded successfully!');
+          id = response.text();
         }).catch(err => {
           console.error(err);
         });
@@ -88,6 +86,31 @@
     }
   };
 
+  uploadForm.onsubmit = (e) => {
+    e.preventDefault();
+    const filenameInput = document.getElementById("filename");
+    let filename = filenameInput.value.trim();
+    if (!filename) {
+      alert("Please enter a valid filename.");
+      return;
+    }
+    // Ensure filename ends with .webm
+    if (!filename.endsWith(".webm")) {
+      filename += ".webm";
+    }
+    const formData = new FormData();
+    formData.append('fileName', filename);
+
+    fetch('/api/videos/id', {
+      method: 'PUT',
+      body: formData
+    }).then(response => {
+      alert('Video uploaded successfully!');
+    }).catch(err => {
+      console.error(err);
+    });
+  };
+
   async function showPreview(){
     recordBtn.classList.add("hidden")
     preview.srcObject.getTracks().forEach(track => track.stop());
@@ -99,6 +122,8 @@
     preview.src = url;
     preview.controls = true;
     preview.autoplay = false;
+
+    uploadForm.classList.remove("hidden");
   }
 // ...existing code...
 </script>

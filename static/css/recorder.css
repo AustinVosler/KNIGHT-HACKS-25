@@ -67,6 +67,29 @@
   padding: 0.85rem 2.25rem;
 }
 
+.uploadForm{
+  background: #fff;
+  color: var(--accent-4);
+  border: 2px solid var(--accent-4);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.85rem 2.25rem;
+}
+
+input[type="text"] {
+  border: 2px solid #F15A29;  /* bright orange border */
+  border-radius: 10px;        /* soft corners */
+  padding: 10px 14px;         /* comfortable spacing */
+  outline: none;              /* removes default focus border */
+  transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus {
+  border-color: #ff7f50;      /* lighter orange when active */
+  box-shadow: 0 0 6px rgba(241, 90, 41, 0.5); /* glow effect */
+}
+
 .recorder-btn:hover {
   background: var(--accent-4);
   color: #fff;
