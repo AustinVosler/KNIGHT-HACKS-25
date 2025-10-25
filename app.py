@@ -3,6 +3,12 @@ from threading import Thread
 from flask import Flask, jsonify, request, render_template
 import os
 import sqlite3
+import shutil
+
+FILE_PATH = 'videos/'
+if os.path.exists(FILE_PATH):
+    shutil.rmtree(FILE_PATH)
+os.makedirs(FILE_PATH, exist_ok=True)
 
 # Connect to SQLite database (or create it)
 def database_connection():
@@ -50,6 +56,16 @@ def list_videos():
         c.execute('SELECT * FROM videos')
         videos = c.fetchall()
         return jsonify(videos)
+    
+@app.route('/api/videos', methods=['POST'])
+def add_video_route():
+    data = request.files['file']
+    path = os.path.join(FILE_PATH, data.filename)
+    O_filename = data.filename
+    video_id = add_video(path, O_filename)
+    path = os.path.join(FILE_PATH, str(video_id) + ".webm")
+    data.save(path)
+    return jsonify({"id": video_id}), 201
 
 def open_browser():
     webbrowser.open("http://127.0.0.1:5000")
@@ -58,9 +74,6 @@ if __name__ == '__main__':
     conn = database_connection()
     initialize_db(conn)
     conn.close()
-
-    add_video('/path/to/video1.mp4', 'output1.mp4')
-    add_video('/path/to/video2.mp4', 'output2.mp4')
 
     Thread(target=open_browser).start()
     app.run(debug=True)

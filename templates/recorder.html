@@ -37,10 +37,11 @@
                     recordedChunks = [];
 
                     // Upload video to server
+                    const videoFile = new File([blob], 'recorded_video.webm', { type: 'video/webm' });
                     const formData = new FormData();
-                    formData.append('video', blob, 'recorded_video.webm');
+                    formData.append('file', videoFile);
 
-                    fetch('/upload', {
+                    fetch('/api/videos', {
                         method: 'POST',
                         body: formData
                     }).then(response => {
