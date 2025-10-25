@@ -26,6 +26,8 @@
   let recordedChunks = [];
   let isRecording = false;
 
+  let videoFile;
+
   // Get access to the webcam
   navigator.mediaDevices
     .getUserMedia({ video: true, audio: true })
@@ -53,7 +55,7 @@
         }
 
         // Upload video to server
-        const videoFile = new File([blob], fileName, { type: 'video/webm' });
+        videoFile = new File([blob], fileName, { type: 'video/webm' });
         const formData = new FormData();
         formData.append('file', videoFile);
 
@@ -82,8 +84,22 @@
       isRecording = false;
       recordBtn.textContent = "Start Recording";
       recordBtn.classList.remove("recording");
+      showPreview();
     }
   };
+
+  async function showPreview(){
+    recordBtn.classList.add("hidden")
+    preview.srcObject.getTracks().forEach(track => track.stop());
+    preview.srcObject = null;
+    while(videoFile === undefined){
+      await new Promise(r => setTimeout(r, 100));
+    }
+    const url = URL.createObjectURL(videoFile);
+    preview.src = url;
+    preview.controls = true;
+    preview.autoplay = false;
+  }
 // ...existing code...
 </script>
 {% endblock %}
