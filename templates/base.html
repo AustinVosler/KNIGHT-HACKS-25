@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/static/css/background.css" />
     {% block extra_css %}{% endblock %}
   </head>
-  <body>
+  <body class="{% block body_class %}{% endblock %}">
     <main class="page">
       <!-- Top left navigation buttons -->
       <nav class="top-nav">
@@ -18,22 +18,39 @@
       </nav>
 
       <!-- New SVG background -->
-      <div class="background-svg" aria-hidden="true">
-        <img src="/static/img/background.svg" alt="background" style="width:100vw;height:100vh;object-fit:cover;position:absolute;top:0;left:0;z-index:0;pointer-events:none;" />
-      </div>
-      <div class="center-content">
-        {% block content %}{% endblock %}
-      </div>
+      <div class="background-svg" aria-hidden="true"></div>
+      {% block content %}{% endblock %}
     </main>
     {% block scripts %}{% endblock %}
     <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+      }
+      .background-svg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 0;
+        pointer-events: none;
+        background: url('/static/img/background.svg') no-repeat center center;
+        background-size: cover;
+      }
       .top-nav {
-        position: absolute;
+        position: fixed;
         top: 1.5rem;
         left: 1.5rem;
         display: flex;
         gap: 1rem;
-        z-index: 2;
+        z-index: 10;
       }
       .nav-btn {
         background: #fff;
