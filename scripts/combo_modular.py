@@ -368,16 +368,13 @@ def main():
 
 def video_upload(filename):
     """
-    Main entry point for the gesture recognition demo.
-    
-    Sets up:
-    - MediaPipe Hands for hand detection
-    - GestureEngine with registered gestures, motions, and rules
-    - OpenCV webcam capture and display
-    - Sound playback system with per-event routing
-    
-    Runs a real-time loop processing frames, detecting gestures, and
-    playing sounds based on events.
+    Process a prerecorded video to detect hand events and overlay sound effects
+    at the exact timestamps where events occur.
+
+    Output video visuals remain identical to the original (no drawing/flip);
+    only audio is augmented by mixing in the detected gesture/motion/proximity
+    sounds at their detection times. The original video's audio (if present)
+    is preserved under the overlays.
     """
     # MediaPipe setup
     mp_hands = mp.solutions.hands
@@ -399,7 +396,8 @@ def video_upload(filename):
     engine.register_gesture(Symbol7Gesture(down_cos=0.6))
     
     # Korean heart MUST be registered before gun to get priority (both use thumb+index)
-    engine.register_gesture(KoreanHeartGesture(sound_path="./sounds/kpop.mp3", volume=0.8))
+    # Use lists for sound_path for consistency with engine types
+    engine.register_gesture(KoreanHeartGesture(sound_path=["./sounds/kpop.mp3"], volume=0.8))
     engine.register_gesture(GunPoseGesture())
     
     engine.register_gesture(OpenPalmGesture())
@@ -408,14 +406,14 @@ def video_upload(filename):
     engine.register_gesture(ThumbsUpGesture())
     
     # Attach sound directly to the gesture class with a per-gesture volume
-    engine.register_gesture(MiddleFingerGesture(sound_path="./sounds/fahh.mp3", volume=1.0))
+    engine.register_gesture(MiddleFingerGesture(sound_path=["./sounds/fahh.mp3"], volume=1.0))
     
     # Register motions with sounds
     engine.register_motion(RecoilMotion(
         movement_threshold=0.05, 
         gate_gesture="gun", 
         cooldown_s=0.6,
-        sound_path="./sounds/bang.mp3",
+        sound_path=["./sounds/bang.mp3"],
         volume=0.6
     ))
     
@@ -425,7 +423,7 @@ def video_upload(filename):
         b="seven", 
         threshold=0.50, 
         cooldown_s=0.6,
-        sound_path="./sounds/67.mp3",
+        sound_path=["./sounds/67.mp3"],
         volume=0.1
     ))
     engine.register_rule(ProximityRule(
@@ -433,7 +431,7 @@ def video_upload(filename):
         b="thumbs_up", 
         threshold=0.30, 
         cooldown_s=0.6,
-        sound_path="./sounds/yippee.mp3",
+        sound_path=["./sounds/yippee.mp3"],
         volume=0.7
     ))
     
@@ -445,26 +443,18 @@ def video_upload(filename):
     # engine.register_rule(ProximityRule(a="peace", b="thumbs_up", threshold=0.15, cooldown_s=0.6))
 
     # -------------------- VIDEO INPUT --------------------
-    cap = cv2.VideoCapture(filename) 
+    cap = cv2.VideoCapture(filename)
     if not cap.isOpened():
-        print("Failed to open camera")
+        print("Failed to open video file")
         return
-    
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    # CREATE OUTPUT VIDEO FILE
-    # Saves processed frames to a temporary video (no audio yet)
-    temp_video_path = tempfile.mktemp(suffix=".mp4")
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    out = cv2.VideoWriter(temp_video_path, fourcc, fps, (width, height))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
 
     # STORE SOUND EVENTS WITH TIMESTAMPS
     sound_events = []  # List of tuples (time_in_seconds, sound_path, volume)
     frame_idx = 0
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print("Processing video...")
+    print("Scanning for hand events to place audio overlays...")
 
 
 
@@ -476,22 +466,19 @@ def video_upload(filename):
             print("Failed to capture frame")
             break
 
-        # NEW
         frame_idx += 1
-        time_s = frame_idx / fps  # compute time of current frame in seconds
-
-
-
-        frame = cv2.flip(frame, 1)
+        # Prefer precise timestamp from the file if available; fallback to frame index
+        pos_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
+        time_s = (pos_ms / 1000.0) if pos_ms and pos_ms > 0 else (frame_idx / float(fps))
+        # IMPORTANT: Do NOT flip or draw on frames; visuals must remain unchanged
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         result = hands.process(rgb)
 
         events = []
         if result.multi_hand_landmarks:
-            # Draw hands and run engine
+            # Run engine (no drawing)
             for h in result.multi_hand_landmarks:
-                mp_draw.draw_landmarks(frame, h, mp_hands.HAND_CONNECTIONS)
-
+                pass
             out = engine.process(result.multi_hand_landmarks)
             events = out["events"]
             
@@ -500,17 +487,7 @@ def video_upload(filename):
                 for e in events:
                     print(f"Event detected: {e}")
 
-            # Optional: simple overlay of detected gestures per hand
-            overlays = out.get("overlays", [])
-            for ov in overlays:
-                detections = ov.get("detections", {})
-                centers = ov.get("centers", {})
-                for hid, center in centers.items():
-                    label = "+".join(sorted(list(detections.get(hid, set()))))
-                    if label:
-                        x = int(center[0] * frame.shape[1])
-                        y = int(center[1] * frame.shape[0])
-                        cv2.putText(frame, f"{hid}:{label}", (x - 20, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2, cv2.LINE_AA)
+            # No visual overlays; we only need event timestamps
 
         # -------------------- EVENT REACTION --------------------
         for e in events:
@@ -520,23 +497,29 @@ def video_upload(filename):
 
             # Instead of playing sound live, record it for later mixing
             # 1. Gesture events (simple name, no colon)
-            if ":" not in etype and etype not in ["recoil"]:
+            if ":" not in etype and etype not in ["recoil", "hammer_strike"]:
                 g = _get_gesture_by_name(engine, etype)
                 if g and g.sound_path:
-                    # NEW
-                    sound_events.append((time_s, g.sound_path, g.volume))
+                    # Normalize to list of paths
+                    paths = g.sound_path if isinstance(g.sound_path, list) else [g.sound_path]
+                    for p in paths:
+                        sound_events.append((time_s, p, g.volume))
             
-            # 2. Motion events (e.g., "recoil")
-            elif etype == "recoil":
+            # 2. Motion events (e.g., "recoil", "hammer_strike")
+            elif etype in ["recoil", "hammer_strike"]:
                 m = _get_motion_by_name(engine, etype)
                 if m and m.sound_path:
-                    sound_events.append((time_s, m.sound_path, m.volume))
+                    paths = m.sound_path if isinstance(m.sound_path, list) else [m.sound_path]
+                    for p in paths:
+                        sound_events.append((time_s, p, m.volume))
             
             # 3. Proximity events (format: "proximity:a+b")
             elif etype.startswith("proximity:"):
                 rule = _get_rule_by_event_type(engine, etype)
                 if rule and rule.sound_path:
-                    sound_events.append((time_s, rule.sound_path, rule.volume))
+                    paths = rule.sound_path if isinstance(rule.sound_path, list) else [rule.sound_path]
+                    for p in paths:
+                        sound_events.append((time_s, p, rule.volume))
 
             # Visual feedback on screen
             # if played:
@@ -548,23 +531,17 @@ def video_upload(filename):
         #     break
         
 
-        # TODO: Save post-processed video at end 
-        # Write processed frame to output video
-        out.write(frame)
+        # Do not write frames; we keep visuals untouched
 
     cap.release()
-    out.release()
     cv2.destroyAllWindows()
     # pygame.mixer.quit()
 
     # -------------------- POST-PROCESS AUDIO --------------------
-    print("Combining audio with video...")
+    print("Combining detected sounds with the original video...")
 
-    # Load original video (to get its existing audio track)
+    # Load original video (for its visuals and existing audio track)
     base_clip = VideoFileClip(filename)
-
-    # Load the new processed video (frames only, no audio)
-    processed_clip = VideoFileClip(temp_video_path)
 
     # Create audio clips for all sound events
     audio_clips = []
@@ -581,14 +558,28 @@ def video_upload(filename):
     else:
         final_audio = CompositeAudioClip(audio_clips)
 
-    # Merge final audio into processed video
-    final_clip = processed_clip.set_audio(final_audio)
+    # Merge final audio into the ORIGINAL video visuals (no visual changes)
+    final_clip = base_clip.set_audio(final_audio)
 
-    # Save final video with embedded sound effects
-    # TODO: Change the output with sounds name
-    output_path = "output_with_sounds.mp4"
+    # Save final video with embedded sound effects next to original
+    base, _ = os.path.splitext(os.path.basename(filename))
+    out_dir = os.path.dirname(filename) or "."
+    output_path = os.path.join(out_dir, f"{base}_sfx.mp4")
     final_clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
+    
+    # Close clips to release resources (Windows file locks)
+    final_clip.close()
+    base_clip.close()
+    for ac in audio_clips:
+        try:
+            ac.close()
+        except Exception:
+            pass
+
+    print(f"Done. Wrote: {output_path}")
+    return output_path
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    video_upload("./videos/1.webm")
