@@ -85,3 +85,7 @@
   border-color: #d32f2f;
   box-shadow: 0 4px 18px rgba(211,47,47,0.15);
 }
+
+.hidden {
+  display: none;
+}

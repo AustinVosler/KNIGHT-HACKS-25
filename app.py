@@ -4,8 +4,9 @@ from flask import Flask, jsonify, request, render_template, send_file
 import os
 import sqlite3
 import shutil
+import uuid
 
-FILE_PATH = 'videos/'
+FILE_PATH = 'FILES'
 # if os.path.exists(FILE_PATH):
 #    shutil.rmtree(FILE_PATH)
 os.makedirs(FILE_PATH, exist_ok=True)
@@ -16,21 +17,31 @@ def database_connection():
 
 def initialize_db(conn):
     c = conn.cursor()
-    # c.execute('DROP TABLE IF EXISTS videos')
+    c.execute('DROP TABLE IF EXISTS unprocessed_videos')
     c.execute('''
-        CREATE TABLE IF NOT EXISTS videos (
+        CREATE TABLE IF NOT EXISTS unprocessed_videos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            path TEXT NOT NULL,
+            folder TEXT NOT NULL,
+            filename TEXT NOT NULL,
             O_filename TEXT NOT NULL,
-            processed BOOLEAN DEFAULT 0
+            pair_id INTEGER UNIQUE DEFAULT NULL
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS processed_videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            O_filename TEXT NOT NULL,
+            pair_id INTEGER UNIQUE
         )
     ''')
     conn.commit()
 
-def add_video(path, O_filename):
+def add_video(folder, filename, O_filename):
     with database_connection() as conn: 
         c = conn.cursor()
-        c.execute('INSERT INTO videos (path, O_filename, processed) VALUES (?, ?, ?)', (path, O_filename, False))
+        c.execute('INSERT INTO videos (folder, filename, O_filename) VALUES (?, ?, ?)', (folder, filename, O_filename))
         conn.commit()
         return c.lastrowid
 
@@ -61,10 +72,6 @@ def trimming():
 
 ### API ENDPOINTS ###
 
-@app.route('/api/data', methods=['GET'])
-def get_data():
-    return jsonify({"message": "This is your Flask backend!"})
-
 @app.route('/api/videos', methods=['GET'])
 def list_videos():
     with database_connection() as conn:
@@ -76,10 +83,10 @@ def list_videos():
 @app.route('/api/videos', methods=['POST'])
 def add_video_route():
     data = request.files['file']
-    path = os.path.join(FILE_PATH, data.filename)
+    newName = uuid.uuid4().hex + ".webm"
     O_filename = data.filename
-    video_id = add_video(path, O_filename)
-    path = os.path.join(FILE_PATH, str(video_id) + ".webm")
+    video_id = add_video("temp", newName, O_filename)
+    path = os.path.join(FILE_PATH, "temp", newName)
     data.save(path)
     return jsonify({"id": video_id}), 201
 
@@ -91,10 +98,77 @@ def send_video(id):
         video = c.fetchone()
         if not video:
             return jsonify({"error": "Video not found"}), 404
-    video_path = os.path.join(FILE_PATH, str(id) + ".webm")
-    return send_file(video_path, mimetype='video/webm')
+    path = os.path.join(FILE_PATH, "videos", video.filename)
+    return send_file(path, mimetype='video/webm')
 
+@app.route('/api/videos/<int:id>', methods=['PUT'])
+def save_video(id):
+    with database_connection() as conn:
+        c = conn.cursor()
+        c.execute('SELECT * FROM videos WHERE id = ?', (id,))
+        video = c.fetchone()
+        if not video:
+            return jsonify({"error": "Video not found"}), 404
 
+        temp_path = os.path.join(FILE_PATH, "temp", video[2])  # filename
+        final_path = os.path.join(FILE_PATH, "videos", video[2])
+
+        # Ensure videos folder exists
+        os.makedirs(os.path.join(FILE_PATH, "videos"), exist_ok=True)
+
+        if not os.path.exists(temp_path):
+            return jsonify({"error": "Temp video not found"}), 404
+
+        shutil.move(temp_path, final_path)
+        c.execute('UPDATE videos SET folder = ? WHERE id = ?', ("videos", id))
+        conn.commit()
+
+    return jsonify({"message": "Video moved to videos folder"}), 200
+
+@app.route('/api/videos/<int:id>', methods=['DELETE'])
+def delete_video(id):
+    with database_connection() as conn:
+        c = conn.cursor()
+        c.execute('SELECT * FROM videos WHERE id = ?', (id,))
+        video = c.fetchone()
+        c.execute('DELETE FROM videos WHERE id = ?', (id,))
+        conn.commit()
+    path = os.path.join(FILE_PATH, "videos", video.filename)
+    if os.path.exists(path):
+        os.remove(path)
+    return jsonify({"message": "Video deleted"}), 204
+
+@app.route('/api/videos/process/<int:id>', methods=['PUT'])
+def process_video(id):
+    with database_connection() as conn:
+        c = conn.cursor()
+        # Find the unprocessed video
+        c.execute('SELECT * FROM unprocessed_videos WHERE id = ?', (id,))
+        unprocessed = c.fetchone()
+        if not unprocessed:
+            return jsonify({"error": "Unprocessed video not found"}), 404
+
+        # Build path to the unprocessed video
+        input_path = os.path.join(unprocessed[1], unprocessed[2])  # folder, filename
+
+        # --- Process the video here ---
+        # processed_video_path = FUNCTION
+        processed_video_path = "temp"
+        processed_filename = uuid.uuid4().hex + ".webm"
+        
+        processed_video_path.rename(FILE_PATH, "videos", processed_filename)
+        
+
+        # Add processed video to DB
+        c.execute('INSERT INTO processed_videos (folder, filename, O_filename, pair_id) VALUES (?, ?, ?, ?)',
+                  ("videos", processed_filename, unprocessed[3], id))
+        processed_id = c.lastrowid
+
+        # Update unprocessed video with pair_id
+        c.execute('UPDATE unprocessed_videos SET pair_id = ? WHERE id = ?', (processed_id, id))
+        conn.commit()
+
+    return jsonify({"message": "Video processed and linked", "processed_id": processed_id}), 201
 
 def open_browser():
     webbrowser.open("http://127.0.0.1:5000")
