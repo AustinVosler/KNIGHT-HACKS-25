@@ -29,7 +29,7 @@ import cv2
 import mediapipe as mp
 import pygame
 import os
-from moviepy import VideoFileClip, AudioFileClip, CompositeAudioClip # JW
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip # JW
 from typing import Optional, List
 
 from .gesture_engine import (
@@ -130,6 +130,95 @@ def _get_gesture_by_name(engine: GestureEngine, name: str):
     return None
 
 
+def create_engine() -> GestureEngine:
+    """
+    Create and configure a GestureEngine with all gestures, motions, rules,
+    and optional GIF overlay metadata (single-string gif_path, gif_scale_h).
+    This configuration is shared by both live (main) and video_upload processing.
+    """
+    # Engine and detectors
+    engine = GestureEngine(smoother_alpha=0.5, max_gesture_velocity=0.15)
+
+    # Gestures
+    engine.register_gesture(Symbol6Gesture())
+    engine.register_gesture(Symbol7Gesture(down_cos=0.6))
+
+    # Korean heart MUST be registered before gun to get priority (both use thumb+index)
+    engine.register_gesture(KoreanHeartGesture(sound_path=["./sounds/kpop.mp3"], volume=1))
+    engine.register_gesture(GunPoseGesture())
+
+    engine.register_gesture(FantasticGesture(sound_path=["./sounds/fantastic.mp3"], volume=1.0))
+    
+    engine.register_gesture(OpenPalmGesture(sound_path=["./sounds/hi.mp3"], volume=1))
+    engine.register_gesture(FistGesture())
+    engine.register_gesture(PeaceSignGesture())
+    engine.register_gesture(ThumbsUpGesture())
+    # Middle finger plays BOTH fahh.mp3 AND thunder.mp3; unify volume with video settings
+    engine.register_gesture(MiddleFingerGesture(sound_path=["./sounds/fahh.mp3", "./sounds/thunder.mp3"], volume=0.6))
+
+    # Motions
+    recoil_motion = RecoilMotion(
+        movement_threshold=0.05,
+        gate_gesture="gun",
+        cooldown_s=0.6,
+        sound_path=["./sounds/bang.mp3"],
+        volume=0.6,
+    )
+    # Optional single-string GIF path for recoil (if asset available)
+    recoil_motion.gif_path = "./gifs/gun_recoil.gif"
+    recoil_motion.gif_scale_h = 0.20
+    engine.register_motion(recoil_motion)
+
+    hammer_motion = HammerStrikeMotion(
+        movement_threshold=0.01,
+        gate_gesture="fist",
+        cooldown_s=0.6,
+        sound_path=["./sounds/metal_pipe.mp3"],
+        volume=0.3,  # align with video settings
+        require_downward=True,
+        min_down_ratio=0.6,
+    )
+    hammer_motion.gif_path = "./gifs/metal_pipe.gif"
+    hammer_motion.gif_scale_h = 0.20
+    engine.register_motion(hammer_motion)
+
+    # Proximity rules
+    engine.register_rule(ProximityRule(
+        a="six",
+        b="seven",
+        threshold=0.50,
+        cooldown_s=0.6,
+        sound_path=["./sounds/67.mp3"],
+        volume=0.05,  # align with video settings
+    ))
+    engine.register_rule(ProximityRule(
+        a="thumbs_up",
+        b="thumbs_up",
+        threshold=0.30,
+        cooldown_s=0.6,
+        sound_path=["./sounds/yippee.mp3"],
+        volume=0.7,
+    ))
+    # High-five flashbang: two open palms coming together
+    engine.register_rule(ProximityRule(
+        a="palm",
+        b="palm",
+        threshold=0.14,      # tighter distance = actual contact-ish
+        cooldown_s=1.2,      # avoid rapid retriggers
+        sound_path=["./sounds/flashbang.mp3"],
+        volume=1.0,
+    ))
+
+    # Gesture trigger rules
+    engine.register_gesture_rule(GestureTriggerRule(g="middle_finger", cooldown_s=1.0))
+    engine.register_gesture_rule(GestureTriggerRule(g="korean_heart", cooldown_s=1.5))
+    engine.register_gesture_rule(GestureTriggerRule(g="palm", cooldown_s=1.0))
+    if FantasticGesture is not None:
+        engine.register_gesture_rule(GestureTriggerRule(g="fantastic", cooldown_s=1.0))
+
+    return engine
+
+
 def _get_motion_by_name(engine: GestureEngine, name: str):
     """
     Find a registered motion by name.
@@ -203,72 +292,8 @@ def main():
     )
     mp_draw = mp.solutions.drawing_utils
 
-    # Engine and detectors
-    # max_gesture_velocity: prevent gesture detection when hand is moving too fast (normalized units/second)
-    # Lower = stricter (only detect on very still hands), Higher = more lenient
-    engine = GestureEngine(smoother_alpha=0.5, max_gesture_velocity=0.15)
-    
-    # Register all gestures
-    engine.register_gesture(Symbol6Gesture())
-    engine.register_gesture(Symbol7Gesture(down_cos=0.6))
-    
-    # Korean heart MUST be registered before gun to get priority (both use thumb+index)
-    engine.register_gesture(KoreanHeartGesture(sound_path=["./sounds/kpop.mp3"], volume=0.8))
-    engine.register_gesture(GunPoseGesture())
-    
-    engine.register_gesture(OpenPalmGesture(sound_path=["./sounds/hi.mp3"], volume=3))
-    engine.register_gesture(FistGesture())
-    engine.register_gesture(PeaceSignGesture())
-    engine.register_gesture(ThumbsUpGesture())
-    
-    # Attach sounds directly to the gesture class with a per-gesture volume
-    # Middle finger plays BOTH fahh.mp3 AND thunder.mp3
-    engine.register_gesture(MiddleFingerGesture(sound_path=["./sounds/fahh.mp3", "./sounds/thunder.mp3"], volume=1.0))
-    
-    # Register motions with sounds
-    # Movement threshold: lower = more sensitive (easier to trigger), higher = less sensitive
-    # Typical quick hand jerk is around 0.03-0.08 in normalized coords
-    engine.register_motion(RecoilMotion(
-        movement_threshold=0.03,  # Made more sensitive (was 0.05)
-        gate_gesture="gun", 
-        cooldown_s=0.4,  # Reduced cooldown to allow faster repeated shots
-        sound_path=["./sounds/bang.mp3"],
-        volume=0.6
-    ))
-
-    # Hammer fist downward strike -> metal pipe impact
-    engine.register_motion(HammerStrikeMotion(
-        movement_threshold=0.01,   # Slightly stricter than recoil to avoid noise
-        gate_gesture="fist",
-        cooldown_s=0.6,
-        sound_path=["./sounds/metal_pipe.mp3"],
-        volume=0.6,
-        require_downward=True,
-        min_down_ratio=0.6,
-    ))
-    
-    # Register proximity rules with sounds
-    engine.register_rule(ProximityRule(
-        a="six", 
-        b="seven", 
-        threshold=0.50, 
-        cooldown_s=0.6,
-        sound_path=["./sounds/67.mp3"],
-        volume=0.1
-    ))
-    engine.register_rule(ProximityRule(
-        a="thumbs_up", 
-        b="thumbs_up", 
-        threshold=0.30, 
-        cooldown_s=0.6,
-        sound_path=["./sounds/yippee.mp3"],
-        volume=0.7
-    ))
-    
-    # Register single-gesture trigger rules (emit events directly for gestures)
-    engine.register_gesture_rule(GestureTriggerRule(g="middle_finger", cooldown_s=1.0))
-    engine.register_gesture_rule(GestureTriggerRule(g="korean_heart", cooldown_s=1.5))  # Longer cooldown for heart
-    engine.register_gesture_rule(GestureTriggerRule(g="palm", cooldown_s=1.0))
+    # Build a shared engine configuration
+    engine = create_engine()
     # Uncomment to add more proximity rules:
     # engine.register_rule(ProximityRule(a="palm", b="fist", threshold=0.15, cooldown_s=0.6))
     # engine.register_rule(ProximityRule(a="peace", b="thumbs_up", threshold=0.15, cooldown_s=0.6))
@@ -391,79 +416,8 @@ def video_upload(filename) -> str:
     )
     mp_draw = mp.solutions.drawing_utils
 
-    # Engine and detectors
-    # max_gesture_velocity: prevent gesture detection when hand is moving too fast (normalized units/second)
-    # Lower = stricter (only detect on very still hands), Higher = more lenient
-    engine = GestureEngine(smoother_alpha=0.5, max_gesture_velocity=0.15)
-    
-    # Register all gestures
-    engine.register_gesture(Symbol6Gesture())
-    engine.register_gesture(Symbol7Gesture(down_cos=0.6))
-    
-    # Korean heart MUST be registered before gun to get priority (both use thumb+index)
-    # Use lists for sound_path for consistency with engine types
-    engine.register_gesture(KoreanHeartGesture(sound_path=["./sounds/kpop.mp3"], volume=1))
-    engine.register_gesture(GunPoseGesture())
-    
-    engine.register_gesture(OpenPalmGesture(sound_path=["./sounds/hi.mp3"], volume=1))
-    engine.register_gesture(FistGesture())
-    engine.register_gesture(PeaceSignGesture())
-    engine.register_gesture(ThumbsUpGesture())
-    engine.register_gesture(FantasticGesture(sound_path=["./sounds/fantastic.mp3"], volume=1.0))
-    
-    # Attach sound directly to the gesture class with a per-gesture volume
-    engine.register_gesture(MiddleFingerGesture(sound_path=["./sounds/fahh.mp3", "./sounds/thunder.mp3"], volume=0.6))
-    
-    # Register motions with sounds
-    recoil_motion = RecoilMotion(
-        movement_threshold=0.05, 
-        gate_gesture="gun", 
-        cooldown_s=0.6,
-        sound_path=["./sounds/bang.mp3"],
-        volume=0.6
-    )
-    recoil_motion.gif_path = "./gifs/gun_recoil.gif"  
-    recoil_motion.gif_scale_h = 0.20  # fraction of video height
-    engine.register_motion(recoil_motion)
-    # Hammer fist downward strike -> metal pipe impact
-    # Make GIF addable like sounds (optional single string): attach to the motion instance
-    hammer_motion = HammerStrikeMotion(
-        movement_threshold=0.01,   # Slightly stricter than recoil to avoid noise
-        gate_gesture="fist",
-        cooldown_s=0.6,
-        sound_path=["./sounds/metal_pipe.mp3"],
-        volume=0.3,
-        require_downward=True,
-        min_down_ratio=0.6,
-    )
-    # Optional single-string GIF path; always resized later so it doesn't take too much space
-    hammer_motion.gif_path = "./gifs/metal_pipe.gif"  
-    hammer_motion.gif_scale_h = 0.20  # fraction of video height
-    engine.register_motion(hammer_motion)
-    
-    # Register proximity rules with sounds
-    engine.register_rule(ProximityRule(
-        a="six", 
-        b="seven", 
-        threshold=0.50, 
-        cooldown_s=0.6,
-        sound_path=["./sounds/67.mp3"],
-        volume=0.05
-    ))
-    engine.register_rule(ProximityRule(
-        a="thumbs_up", 
-        b="thumbs_up", 
-        threshold=0.30, 
-        cooldown_s=0.6,
-        sound_path=["./sounds/yippee.mp3"],
-        volume=0.7
-    ))
-    
-    # Register single-gesture trigger rules (emit events directly for gestures)
-    engine.register_gesture_rule(GestureTriggerRule(g="middle_finger", cooldown_s=1.0))
-    engine.register_gesture_rule(GestureTriggerRule(g="korean_heart", cooldown_s=1.5))  # Longer cooldown for heart
-    engine.register_gesture_rule(GestureTriggerRule(g="palm", cooldown_s=1.0))
-    engine.register_gesture_rule(GestureTriggerRule(g="fantastic", cooldown_s=1.0))
+    # Use the shared engine configuration from main
+    engine = create_engine()
     # Uncomment to add more proximity rules:
     # engine.register_rule(ProximityRule(a="palm", b="fist", threshold=0.15, cooldown_s=0.6))
     # engine.register_rule(ProximityRule(a="peace", b="thumbs_up", threshold=0.15, cooldown_s=0.6))
@@ -665,5 +619,5 @@ def video_upload(filename) -> str:
 
 
 if __name__ == "__main__":
-    #main()
-    video_upload("./videos/4.webm")
+    main()
+    #video_upload("./videos/4.webm")
