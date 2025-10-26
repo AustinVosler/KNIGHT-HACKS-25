@@ -29,7 +29,7 @@ import cv2
 import mediapipe as mp
 import pygame
 import os
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip # JW
+from moviepy import VideoFileClip, AudioFileClip, CompositeAudioClip # JW
 from typing import Optional, List
 
 from .gesture_engine import (
