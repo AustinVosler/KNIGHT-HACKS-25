@@ -103,7 +103,7 @@ def send_video(id):
         if not video:
             return jsonify({"error": "Video not found"}), 404
     path = os.path.join(FILE_PATH, "videos", video.filename)
-    return send_file(path, mimetype='video/webm')
+    return send_file(path, mimetype='video/mp4')
 
 @app.route('/api/videos/<int:id>', methods=['PUT'])
 def save_video(id):
