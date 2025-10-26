@@ -3,24 +3,6 @@ block extra_css %}
 <link rel="stylesheet" href="/static/css/index.css" />
 <link rel="stylesheet" href="/static/css/recorder.css" />
 {% endblock %} {% block content %}
-<div class="recorder-frame">
-  <video id="preview" width="640" height="480" autoplay muted></video>
-</div>
-<div class="recorder-actions">
-  <button class="cta recorder-btn" id="recordBtn">Start Recording</button>
-</div>
-
-<form id="uploadForm" class="upload-form">
-  <input
-    type="text"
-    id="filename"
-    name="filename"
-    placeholder="Enter a name"
-    required
-  />
-  <button type="submit" class="cta uploadForm">Upload Video</button>
-</form>
-
   <div class="recorder-container">
     <div class="recorder-main">
       <div class="recorder-frame">
@@ -29,12 +11,17 @@ block extra_css %}
       <div class="recorder-actions">
         <button class="cta recorder-btn" id="recordBtn">Start Recording</button>
       </div>
-      <form id="uploadForm">
-        <input type="text" id="filename" name="filename" placeholder="Enter a name" required />
-        <button type="submit" class="cta uploadForm">Upload Video</button>
+      <form id="uploadForm" class="upload-form">
+        <div class="upload-row">
+          <input type="text" id="filename" name="filename" placeholder="Enter a name" required />
+          <button type="submit" class="cta uploadForm">Upload Video</button>
+        </div>
       </form>
     </div>
     
+    <div class="restart-btn-container">
+      <button id="restartBtn" class="cta restart-btn hidden">Restart</button>
+    </div>
     <div class="info-sidebar">
       <h2>Instructions</h2>
       <p>Step 1. Click Start Recording to begin recording. When finished, click Stop Recording.</p>
@@ -53,21 +40,14 @@ block extra_css %}
   
   <div id="completionNotification" class="completion-notification hidden">
     <div class="notification-content">
-      <h2>✅ Video Ready!</h2>
+      <h2>Video Ready!</h2>
       <p>Your video has been processed with all gesture effects.</p>
       <a href="/gallery" class="cta">View in Gallery</a>
       <button id="dismissNotification" class="cta secondary">Dismiss</button>
     </div>
   </div>
 
-<div id="completionNotification" class="completion-notification hidden">
-  <div class="notification-content">
-    <h2>✅ Video Ready!</h2>
-    <p>Your video has been processed with all gesture effects.</p>
-    <a href="/gallery" class="cta">View in Gallery</a>
-    <button id="dismissNotification" class="cta secondary">Dismiss</button>
-  </div>
-</div>
+
 {% endblock %} {% block scripts %}
 <script>
   const preview = document.getElementById("preview");
@@ -239,7 +219,13 @@ block extra_css %}
     preview.controls = true;
     preview.autoplay = false;
 
-    uploadForm.classList.remove("hidden");
+  uploadForm.classList.remove("hidden");
+  document.getElementById("restartBtn").classList.remove("hidden");
   }
+
+  document.getElementById("restartBtn").addEventListener("click", () => {
+    window.location.reload();
+  });
 </script>
 {% endblock %}
+  
