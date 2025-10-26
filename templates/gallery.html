@@ -24,9 +24,9 @@
 			}
 			grid.innerHTML = '';
 			for (const video of videos) {
-				// video: [id, path, O_filename, processed]
+				// video: [id, folder, filename, O_filename, processed]
 				const id = video[0];
-				let filename = video[2];
+				let filename = video[3];
 				if (filename) {
 					filename = filename.replace(/\.[^/.]+$/, "");
 				}
