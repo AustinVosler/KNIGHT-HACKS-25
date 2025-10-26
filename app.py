@@ -90,7 +90,7 @@ def list_videos():
 def add_video_route():
     data = request.files['file']
     newName = uuid.uuid4().hex + ".webm"
-    O_filename = data.fileName
+    O_filename = data.filename
     video_id = add_video("temp", newName, O_filename)
     path = os.path.join(FILE_PATH, "temp", newName)
     data.save(path)
@@ -110,6 +110,10 @@ def send_video(id):
 
 @app.route('/api/videos/<int:id>', methods=['PUT'])
 def save_video(id):
+    # Get the filename from form data
+    filename = request.form.get('fileName')
+    print(filename)
+    
     with database_connection() as conn:
         c = conn.cursor()
         c.execute('SELECT * FROM unprocessed_videos WHERE id = ?', (id,))
@@ -127,7 +131,9 @@ def save_video(id):
             return jsonify({"error": "Temp video not found"}), 404
 
         shutil.move(temp_path, final_path)
-        c.execute('UPDATE unprocessed_videos SET folder = ? WHERE id = ?', ("videos", id))
+
+        c.execute('UPDATE unprocessed_videos SET O_filename = ?, folder = ? WHERE id = ?', (filename, "videos", id))
+
         conn.commit()
 
     return jsonify({"message": "Video moved to videos folder"}), 200
