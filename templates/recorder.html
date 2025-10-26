@@ -3,7 +3,6 @@ block extra_css %}
 <link rel="stylesheet" href="/static/css/index.css" />
 <link rel="stylesheet" href="/static/css/recorder.css" />
 {% endblock %} {% block content %}
-<h1 class="brand">Record Your Video</h1>
 <div class="recorder-frame">
   <video id="preview" width="640" height="480" autoplay muted></video>
 </div>
@@ -21,10 +20,44 @@ block extra_css %}
   <button type="submit" class="cta uploadForm">Upload Video</button>
 </form>
 
-<div id="processingStatus" class="processing-status hidden">
-  <div class="loading-spinner"></div>
-  <p id="statusMessage">Processing your video with gesture effects...</p>
-</div>
+  <div class="recorder-container">
+    <div class="recorder-main">
+      <div class="recorder-frame">
+        <video id="preview" width="640" height="480" autoplay muted></video>
+      </div>
+      <div class="recorder-actions">
+        <button class="cta recorder-btn" id="recordBtn">Start Recording</button>
+      </div>
+      <form id="uploadForm">
+        <input type="text" id="filename" name="filename" placeholder="Enter a name" required />
+        <button type="submit" class="cta uploadForm">Upload Video</button>
+      </form>
+    </div>
+    
+    <div class="info-sidebar">
+      <h2>Instructions</h2>
+      <p>Step 1. Click Start Recording to begin recording. When finished, click Stop Recording.</p>
+      <p>Step 2. Enter a name for your video and click Upload Video, then wait for processing to complete!</p>
+      <br />
+      <h2>Gestures</h2>
+      <p>Hand gun recoil motion, Two thumbs up close together, Closed fist with palm facing camera with movement, Two open palms close together, The Rock &amp; Roll symbol or wolf hand shape, Showing 4, The Korean Idol Heart symbol, 67 hand signs, Middle finger, One open palm</p>
+    </div>
+  </div>
+  
+  <!-- Loading and notification UI -->
+  <div id="processingStatus" class="processing-status hidden">
+    <div class="loading-spinner"></div>
+    <p id="statusMessage">Processing your video with gesture effects...</p>
+  </div>
+  
+  <div id="completionNotification" class="completion-notification hidden">
+    <div class="notification-content">
+      <h2>✅ Video Ready!</h2>
+      <p>Your video has been processed with all gesture effects.</p>
+      <a href="/gallery" class="cta">View in Gallery</a>
+      <button id="dismissNotification" class="cta secondary">Dismiss</button>
+    </div>
+  </div>
 
 <div id="completionNotification" class="completion-notification hidden">
   <div class="notification-content">
