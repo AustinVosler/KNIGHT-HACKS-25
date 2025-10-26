@@ -175,6 +175,24 @@ def process_video(id):
 
     return jsonify({"message": "Video processed and linked", "processed_id": processed_id}), 201
 
+@app.route('/api/videos/status/<int:id>', methods=['GET'])
+def check_video_status(id):
+    """Check if a video has been processed by looking for its pair_id"""
+    with database_connection() as conn:
+        c = conn.cursor()
+        c.execute('SELECT pair_id FROM unprocessed_videos WHERE id = ?', (id,))
+        result = c.fetchone()
+        if not result:
+            return jsonify({"error": "Video not found"}), 404
+        
+        pair_id = result[0]
+        if pair_id is not None:
+            # Video has been processed
+            return jsonify({"status": "completed", "processed_id": pair_id}), 200
+        else:
+            # Still processing
+            return jsonify({"status": "processing"}), 200
+
 def open_browser():
     webbrowser.open("http://127.0.0.1:5000")
 

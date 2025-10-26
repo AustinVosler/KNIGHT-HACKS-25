@@ -19,6 +19,21 @@
     <input type="text" id="filename" name="filename" placeholder="Enter a name" required />
     <button type="submit" class="cta uploadForm">Upload Video</button>
   </form>
+  
+  <!-- Loading and notification UI -->
+  <div id="processingStatus" class="processing-status hidden">
+    <div class="loading-spinner"></div>
+    <p id="statusMessage">Processing your video with gesture effects...</p>
+  </div>
+  
+  <div id="completionNotification" class="completion-notification hidden">
+    <div class="notification-content">
+      <h2>✅ Video Ready!</h2>
+      <p>Your video has been processed with all gesture effects.</p>
+      <a href="/gallery" class="cta">View in Gallery</a>
+      <button id="dismissNotification" class="cta secondary">Dismiss</button>
+    </div>
+  </div>
 {% endblock %}
 
 {% block scripts %}
@@ -103,6 +118,10 @@
     const formData = new FormData();
     formData.append('fileName', filename);
 
+    // Hide form and show loading
+    uploadForm.classList.add("hidden");
+    showProcessingStatus();
+
     fetch(`/api/videos/${id}`, {
       method: 'PUT',
       body: formData
@@ -110,16 +129,68 @@
       startProcess(id);
     }).catch(err => {
       console.error(err);
+      hideProcessingStatus();
+      alert("Error uploading video. Please try again.");
     });
   };
 
   async function startProcess(id){
     fetch(`/api/videos/process/${id}`, {
       method: 'PUT'
+    }).then(() => {
+      // Start polling for completion
+      pollProcessingStatus(id);
     }).catch(err => {
       console.error(err);
+      hideProcessingStatus();
+      alert("Error processing video. Please try again.");
     });
   }
+
+  function pollProcessingStatus(id) {
+    const pollInterval = setInterval(() => {
+      fetch(`/api/videos/status/${id}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'completed') {
+            clearInterval(pollInterval);
+            hideProcessingStatus();
+            showCompletionNotification(data.processed_id);
+          }
+        })
+        .catch(err => {
+          console.error("Error checking status:", err);
+          clearInterval(pollInterval);
+          hideProcessingStatus();
+          alert("Error checking processing status.");
+        });
+    }, 2000); // Poll every 2 seconds
+  }
+
+  function showProcessingStatus() {
+    const statusDiv = document.getElementById("processingStatus");
+    statusDiv.classList.remove("hidden");
+  }
+
+  function hideProcessingStatus() {
+    const statusDiv = document.getElementById("processingStatus");
+    statusDiv.classList.add("hidden");
+  }
+
+  function showCompletionNotification(processedId) {
+    const notificationDiv = document.getElementById("completionNotification");
+    notificationDiv.classList.remove("hidden");
+    
+    // Play a notification sound if available
+    try {
+      const audio = new Audio('/static/sounds/notification.mp3');
+      audio.play().catch(() => {}); // Silently fail if sound doesn't exist
+    } catch (e) {}
+  }
+
+  document.getElementById("dismissNotification")?.addEventListener("click", () => {
+    document.getElementById("completionNotification").classList.add("hidden");
+  });
 
   async function showPreview(){
     recordBtn.classList.add("hidden")
