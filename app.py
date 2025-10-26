@@ -90,7 +90,7 @@ def list_videos():
 def add_video_route():
     data = request.files['file']
     newName = uuid.uuid4().hex + ".webm"
-    O_filename = data.filename
+    O_filename = data.fileName
     video_id = add_video("temp", newName, O_filename)
     path = os.path.join(FILE_PATH, "temp", newName)
     data.save(path)
