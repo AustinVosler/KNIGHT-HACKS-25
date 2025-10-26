@@ -107,11 +107,19 @@
       method: 'PUT',
       body: formData
     }).then(response => {
-      // alert('Video uploaded successfully!');
+      startProcess(id);
     }).catch(err => {
       console.error(err);
     });
   };
+
+  async function startProcess(id){
+    fetch(`/api/videos/process/${id}`, {
+      method: 'POST'
+    }).catch(err => {
+      console.error(err);
+    });
+  }
 
   async function showPreview(){
     recordBtn.classList.add("hidden")
