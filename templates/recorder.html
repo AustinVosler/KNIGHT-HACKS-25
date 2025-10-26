@@ -21,7 +21,6 @@ block extra_css %}
   <button type="submit" class="cta uploadForm">Upload Video</button>
 </form>
 
-<!-- Loading and notification UI -->
 <div id="processingStatus" class="processing-status hidden">
   <div class="loading-spinner"></div>
   <p id="statusMessage">Processing your video with gesture effects...</p>
@@ -50,7 +49,6 @@ block extra_css %}
 
   let videoFile;
 
-  // Get access to the webcam
   navigator.mediaDevices
     .getUserMedia({ video: true, audio: true })
     .then((stream) => {
@@ -66,7 +64,6 @@ block extra_css %}
         const blob = new Blob(recordedChunks, { type: "video/webm" });
         recordedChunks = [];
 
-        // Upload video to server
         videoFile = new File([blob], "blob.webm", { type: "video/webm" });
         const formData = new FormData();
         formData.append("file", videoFile);
@@ -113,14 +110,12 @@ block extra_css %}
       alert("Please enter a valid filename.");
       return;
     }
-    // Ensure filename ends with .webm
     if (!filename.endsWith(".webm")) {
       filename += ".webm";
     }
     const formData = new FormData();
     formData.append("fileName", filename);
 
-    // Hide form and show loading
     uploadForm.classList.add("hidden");
     showProcessingStatus();
 
@@ -143,7 +138,6 @@ block extra_css %}
       method: "PUT",
     })
       .then(() => {
-        // Start polling for completion
         pollProcessingStatus(id);
       })
       .catch((err) => {
@@ -170,7 +164,7 @@ block extra_css %}
           hideProcessingStatus();
           alert("Error checking processing status.");
         });
-    }, 2000); // Poll every 2 seconds
+    }, 2000);
   }
 
   function showProcessingStatus() {
@@ -187,10 +181,9 @@ block extra_css %}
     const notificationDiv = document.getElementById("completionNotification");
     notificationDiv.classList.remove("hidden");
 
-    // Play a notification sound if available
     try {
       const audio = new Audio("/static/sounds/notification.mp3");
-      audio.play().catch(() => {}); // Silently fail if sound doesn't exist
+      audio.play().catch(() => {});
     } catch (e) {}
   }
 
@@ -214,6 +207,5 @@ block extra_css %}
 
     uploadForm.classList.remove("hidden");
   }
-  // ...existing code...
 </script>
 {% endblock %}

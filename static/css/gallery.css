@@ -1,11 +1,7 @@
-
-/* Gallery page overrides */
 .gallery-page {
   align-items: flex-start;
 }
 
-/* Gallery grid layout */
-/* Gallery grid layout: 4 columns for desktop, responsive for mobile */
 .video-grid {
   position: relative;
   z-index: 1;

@@ -10,14 +10,12 @@
   </head>
   <body class="{% block body_class %}{% endblock %}">
     <main class="page">
-      <!-- Top left navigation buttons -->
       <nav class="top-nav">
         <a href="/record" class="nav-btn {{ 'active' if request.path == '/record' else '' }}">Record</a>
         <a href="/gallery" class="nav-btn {{ 'active' if request.path == '/gallery' else '' }}">Gallery</a>
         <a href="/about" class="nav-btn {{ 'active' if request.path == '/about' else '' }}">About</a>
       </nav>
 
-      <!-- New SVG background -->
       <div class="background-svg" aria-hidden="true"></div>
       {% block content %}{% endblock %}
     </main>

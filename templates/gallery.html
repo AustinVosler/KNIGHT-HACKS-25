@@ -24,7 +24,6 @@
 			}
 			grid.innerHTML = '';
 			for (const video of videos) {
-				// video: [id, folder, filename, O_filename, processed]
 				const id = video[0];
 				let filename = video[3];
 				if (filename) {
@@ -32,7 +31,6 @@
 				}
 				const card = document.createElement('div');
 				card.className = 'video-card';
-				// Fetch video blob
 				const videoRes = await fetch(`/api/videos/${id}`);
 				if (!videoRes.ok) {
 					card.innerHTML = `<div class="filename">${filename || ''}</div><p>Video not found</p>`;

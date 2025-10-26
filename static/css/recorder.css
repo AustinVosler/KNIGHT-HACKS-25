@@ -78,16 +78,16 @@
 }
 
 input[type="text"] {
-  border: 2px solid #F15A29;  /* bright orange border */
-  border-radius: 10px;        /* soft corners */
-  padding: 10px 14px;         /* comfortable spacing */
-  outline: none;              /* removes default focus border */
+  border: 2px solid #F15A29;
+  border-radius: 10px;
+  padding: 10px 14px;
+  outline: none;
   transition: border-color 0.2s ease;
 }
 
 input[type="text"]:focus {
-  border-color: #ff7f50;      /* lighter orange when active */
-  box-shadow: 0 0 6px rgba(241, 90, 41, 0.5); /* glow effect */
+  border-color: #ff7f50;
+  box-shadow: 0 0 6px rgba(241, 90, 41, 0.5);
 }
 
 .recorder-btn:hover {
