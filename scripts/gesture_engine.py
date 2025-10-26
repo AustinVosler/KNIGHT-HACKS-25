@@ -812,6 +812,62 @@ class FantasticGesture(Gesture):
         return True
 
 
+class SigmaGesture(Gesture):
+    """
+    Detects the "sigma" / rock/metal hand sign: index and pinky extended, others curled.
+    
+    This gesture requires:
+    - Index and pinky fingers extended and pointing upward
+    - Thumb, middle, and ring fingers curled
+    - Tips significantly above wrist
+    - Classic rock music/metal concert gesture
+    """
+    def __init__(self, sound_path: Optional[List[str]] = None, volume: float = 1.0):
+        super().__init__("sigma", sound_path=sound_path, volume=volume)
+
+    def detect(self, lm_list) -> bool:
+        thumb_ext = _is_ext(lm_list, "thumb")
+        index_ext = _is_ext(lm_list, "index")
+        middle_ext = _is_ext(lm_list, "middle")
+        ring_ext = _is_ext(lm_list, "ring")
+        pinky_ext = _is_ext(lm_list, "pinky")
+
+        # Basic requirement: index and pinky extended, middle and ring NOT extended
+        if not (index_ext and pinky_ext and not middle_ext and not ring_ext):
+            return False
+
+        scale = _scale(lm_list)
+        
+        # Raw Y positions (screen coords: larger Y is lower on screen)
+        wrist_y = lm_list[0][1]
+        index_tip_y = lm_list[8][1]
+        pinky_tip_y = lm_list[20][1]
+
+        # Require the tips to be significantly above the wrist (pointing upward)
+        index_up = (wrist_y - index_tip_y) / scale
+        pinky_up = (wrist_y - pinky_tip_y) / scale
+
+        upward_threshold = 0.03  # Similar to fantastic
+        fingers_upward = index_up > upward_threshold and pinky_up > upward_threshold
+        
+        if not fingers_upward:
+            return False
+
+        # Ensure index and pinky are spread apart (not touching)
+        tips = {
+            "index": lm_list[8],
+            "pinky": lm_list[20],
+        }
+        spread_ip = euclid_2d((tips["index"][0], tips["index"][1]), (tips["pinky"][0], tips["pinky"][1])) / scale
+        
+        # Require reasonable spread between index and pinky
+        min_spread = 0.15  # normalized, tweakable
+        if spread_ip < min_spread:
+            return False
+
+        return True
+
+
 class RecoilMotion(Motion):
     """
     Detects recoil/gun-firing motion: wrist movement while holding a specific gesture.

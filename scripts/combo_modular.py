@@ -34,6 +34,7 @@ from typing import Optional, List
 
 from .gesture_engine import (
     FantasticGesture,
+    SigmaGesture,
     GestureEngine,
     Symbol6Gesture,
     Symbol7Gesture,
@@ -148,6 +149,7 @@ def create_engine() -> GestureEngine:
     engine.register_gesture(GunPoseGesture())
 
     engine.register_gesture(FantasticGesture(sound_path=["./sounds/fantastic.mp3"], volume=1.0))
+    engine.register_gesture(SigmaGesture(sound_path=["./sounds/sigma.mp3"], volume=1.0))
     
     engine.register_gesture(OpenPalmGesture(sound_path=["./sounds/hi.mp3"], volume=1))
     engine.register_gesture(FistGesture())
@@ -218,6 +220,7 @@ def create_engine() -> GestureEngine:
     engine.register_gesture_rule(GestureTriggerRule(g="korean_heart", cooldown_s=1.5))
     engine.register_gesture_rule(GestureTriggerRule(g="palm", cooldown_s=1.0))
     engine.register_gesture_rule(GestureTriggerRule(g="fantastic", cooldown_s=1.0))
+    engine.register_gesture_rule(GestureTriggerRule(g="sigma", cooldown_s=1.0))
 
     return engine
 
