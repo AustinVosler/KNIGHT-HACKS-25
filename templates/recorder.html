@@ -60,8 +60,10 @@
         fetch('/api/videos', {
           method: 'POST',
           body: formData
-        }).then(response => {
-          id = response.text();
+        }).then(response => response.json())
+        .then(data => {
+          console.log("Video uploaded with ID: ", data.id);
+          id = data.id;
         }).catch(err => {
           console.error(err);
         });
@@ -101,11 +103,11 @@
     const formData = new FormData();
     formData.append('fileName', filename);
 
-    fetch('/api/videos/id', {
+    fetch(`/api/videos/${id}`, {
       method: 'PUT',
       body: formData
     }).then(response => {
-      alert('Video uploaded successfully!');
+      // alert('Video uploaded successfully!');
     }).catch(err => {
       console.error(err);
     });

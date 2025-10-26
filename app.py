@@ -7,10 +7,12 @@ import shutil
 from moviepy import VideoFileClip
 import uuid
 
-FILE_PATH = 'FILES'
-# if os.path.exists(FILE_PATH):
-#    shutil.rmtree(FILE_PATH)
-os.makedirs(FILE_PATH, exist_ok=True)
+temp_PATH = 'FILES/temp'
+video_PATH = 'FILES/videos'
+if os.path.exists(temp_PATH):
+    shutil.rmtree(temp_PATH)
+os.makedirs(temp_PATH, exist_ok=True)
+os.makedirs(video_PATH, exist_ok=True)
 
 # Connect to SQLite database (or create it)
 def database_connection():
@@ -89,6 +91,7 @@ def add_video_route():
     video_id = add_video("temp", newName, O_filename)
     path = os.path.join(FILE_PATH, "temp", newName)
     data.save(path)
+    print(video_id)
     return jsonify({"id": video_id}), 201
 
 @app.route('/api/videos/<int:id>', methods=['GET'])
