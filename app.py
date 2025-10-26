@@ -5,6 +5,7 @@ import os
 import sqlite3
 import shutil
 import uuid
+from scripts.combo_modular import video_upload
 
 FILE_PATH = 'FILES'
 # if os.path.exists(FILE_PATH):
@@ -17,7 +18,7 @@ def database_connection():
 
 def initialize_db(conn):
     c = conn.cursor()
-    c.execute('DROP TABLE IF EXISTS unprocessed_videos')
+    #c.execute('DROP TABLE IF EXISTS unprocessed_videos')
     c.execute('''
         CREATE TABLE IF NOT EXISTS unprocessed_videos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -152,9 +153,8 @@ def process_video(id):
         input_path = os.path.join(unprocessed[1], unprocessed[2])  # folder, filename
 
         # --- Process the video here ---
-        # processed_video_path = FUNCTION
-        processed_video_path = "temp"
-        processed_filename = uuid.uuid4().hex + ".webm"
+        processed_video_path = video_upload(input_path)
+        processed_filename = uuid.uuid4().hex + ".mp4"
         
         processed_video_path.rename(FILE_PATH, "videos", processed_filename)
         

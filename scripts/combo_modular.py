@@ -29,12 +29,10 @@ import cv2
 import mediapipe as mp
 import pygame
 import os
-import tempfile # JW
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip # JW
-import time
 from typing import Optional, List
 
-from gesture_engine import (
+from .gesture_engine import (
     GestureEngine,
     Symbol6Gesture,
     Symbol7Gesture,
@@ -51,9 +49,6 @@ from gesture_engine import (
     GestureTriggerRule,
 )
 
-
-# Init audio
-pygame.mixer.init()
 
 # Cache for sounds to avoid reloading
 # Key: sound file path -> pygame Sound object
@@ -193,6 +188,10 @@ def main():
     Runs a real-time loop processing frames, detecting gestures, and
     playing sounds based on events.
     """
+    
+    # Init audio
+    pygame.mixer.init()
+    
     # MediaPipe setup
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(
@@ -366,7 +365,7 @@ def main():
     cv2.destroyAllWindows()
     pygame.mixer.quit()
 
-def video_upload(filename):
+def video_upload(filename) -> str:
     """
     Process a prerecorded video to detect hand events and overlay sound effects
     at the exact timestamps where events occur.
@@ -459,8 +458,17 @@ def video_upload(filename):
         print("Failed to open video file")
         return
 
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    # Get video properties
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if not fps or fps <= 0:
+        print("Warning: Could not detect FPS, defaulting to 30")
+        fps = 30.0
+    
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    print(f"Video properties: {width}x{height} @ {fps} FPS, {total_frames} frames")
 
     # STORE SOUND EVENTS WITH TIMESTAMPS
     sound_events = []  # List of tuples (time_in_seconds, sound_path, volume)
@@ -568,16 +576,20 @@ def video_upload(filename):
     output_path = os.path.join(out_dir, f"{base}_sfx.mp4")
     
     # Use preset and threads for better performance and quality
-    # fps='source' ensures we maintain exact original framerate
+    # Key fix: Use r=fps to force constant frame rate without dropping frames
     final_clip.write_videofile(
+    # output_path = filename.replace(".webm", "_sfx.mp4")
+    # base_clip.write_videofile(
         output_path, 
         codec="libx264", 
         audio_codec="aac",
-        fps=fps,  # Use detected FPS from original
-        preset='medium',  # Balance between speed and quality
+        fps=fps,  # Match original FPS
+        preset='veryslow',  # Fastest preset to avoid frame drops
         threads=4,  # Use multiple threads for encoding
+        bitrate="8000k",  # Higher bitrate for better quality
+        audio_bitrate="192k",  # Better audio quality
         verbose=False,  # Reduce console spam
-        logger=None  # Suppress progress bars for cleaner output
+        write_logfile=False  # Disable log file
     )
     
     # Close clips to release resources (Windows file locks)
@@ -593,6 +605,6 @@ def video_upload(filename):
     return output_path
 
 
-if __name__ == "__main__":
-    #main()
-    video_upload("./videos/4.webm")
+# if __name__ == "__main__":
+#     main()
+    #video_upload("./videos/4.webm")
