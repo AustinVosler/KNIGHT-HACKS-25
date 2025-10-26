@@ -115,7 +115,7 @@
 
   async function startProcess(id){
     fetch(`/api/videos/process/${id}`, {
-      method: 'POST'
+      method: 'PUT'
     }).catch(err => {
       console.error(err);
     });

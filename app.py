@@ -1,3 +1,4 @@
+from pathlib import Path
 import webbrowser
 from threading import Thread
 from flask import Flask, jsonify, request, render_template, send_file
@@ -104,7 +105,7 @@ def send_video(id):
         video = c.fetchone()
         if not video:
             return jsonify({"error": "Video not found"}), 404
-    path = os.path.join(FILE_PATH, "videos", video.filename)
+    path = os.path.join(FILE_PATH, "videos", video[2])
     return send_file(path, mimetype='video/mp4')
 
 @app.route('/api/videos/<int:id>', methods=['PUT'])
@@ -155,14 +156,13 @@ def process_video(id):
             return jsonify({"error": "Unprocessed video not found"}), 404
 
         # Build path to the unprocessed video
-        input_path = os.path.join(unprocessed[1], unprocessed[2])  # folder, filename
+        input_path = os.path.join(FILE_PATH,unprocessed[1], unprocessed[2])  # folder, filename
 
         # --- Process the video here ---
-        processed_video_path = video_upload(input_path)
+        processed_video_path = Path(video_upload(input_path))
         processed_filename = uuid.uuid4().hex + ".mp4"
-        
-        processed_video_path.rename(FILE_PATH, "videos", processed_filename)
-        
+
+        processed_video_path.rename(Path(FILE_PATH) / "videos" / processed_filename)
 
         # Add processed video to DB
         c.execute('INSERT INTO processed_videos (folder, filename, O_filename, pair_id) VALUES (?, ?, ?, ?)',

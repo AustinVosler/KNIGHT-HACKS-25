@@ -376,6 +376,11 @@ def video_upload(filename) -> str:
     is preserved under the overlays.
     """
     # MediaPipe setup
+    
+    print(filename)
+    import os
+    print(os.path.exists(filename))
+    
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(
         static_image_mode=False,
