@@ -200,21 +200,24 @@ def create_engine() -> GestureEngine:
         volume=0.7,
     ))
     # High-five flashbang: two open palms coming together
-    engine.register_rule(ProximityRule(
+    flashbang_rule = ProximityRule(
         a="palm",
         b="palm",
         threshold=0.14,      # tighter distance = actual contact-ish
         cooldown_s=1.2,      # avoid rapid retriggers
         sound_path=["./sounds/flashbang.mp3"],
         volume=1.0,
-    ))
+    )
+    # Add GIF overlay for flashbang effect
+    flashbang_rule.gif_path = "./gifs/flashbang.gif"
+    flashbang_rule.gif_scale_h = 0.30  # Larger than gun/pipe for dramatic effect
+    engine.register_rule(flashbang_rule)
 
     # Gesture trigger rules
     engine.register_gesture_rule(GestureTriggerRule(g="middle_finger", cooldown_s=1.0))
     engine.register_gesture_rule(GestureTriggerRule(g="korean_heart", cooldown_s=1.5))
     engine.register_gesture_rule(GestureTriggerRule(g="palm", cooldown_s=1.0))
-    if FantasticGesture is not None:
-        engine.register_gesture_rule(GestureTriggerRule(g="fantastic", cooldown_s=1.0))
+    engine.register_gesture_rule(GestureTriggerRule(g="fantastic", cooldown_s=1.0))
 
     return engine
 
@@ -490,6 +493,20 @@ def video_upload(filename) -> str:
                     paths = g.sound_path if isinstance(g.sound_path, list) else [g.sound_path]
                     for p in paths:
                         sound_events.append((time_s, p, g.volume))
+                # Record visual GIF overlay if configured (for gestures like fantastic, korean_heart, etc.)
+                if g is not None and getattr(g, "gif_path", None):
+                    hid = e.get("hand_id")
+                    if hid is not None and hid in centers:
+                        cx = int(centers[hid][0] * width)
+                        cy = int(centers[hid][1] * height)
+                        visual_events.append({
+                            "t": time_s,
+                            "etype": etype,
+                            "x": cx,
+                            "y": cy,
+                            "gif_path": getattr(g, "gif_path"),
+                            "scale_h": float(getattr(g, "gif_scale_h", 0.20)),
+                        })
             
             # 2. Motion events (e.g., "recoil", "hammer_strike")
             elif etype in ["recoil", "hammer_strike"]:
@@ -520,6 +537,24 @@ def video_upload(filename) -> str:
                     paths = rule.sound_path if isinstance(rule.sound_path, list) else [rule.sound_path]
                     for p in paths:
                         sound_events.append((time_s, p, rule.volume))
+                # Record visual GIF overlay if configured (for proximity rules like flashbang)
+                if rule is not None and getattr(rule, "gif_path", None):
+                    # For proximity events, use the midpoint between the two hands
+                    pair = e.get("pair")
+                    if pair is not None and len(pair) == 2:
+                        hid1, hid2 = pair
+                        if hid1 in centers and hid2 in centers:
+                            # Calculate midpoint between the two hands
+                            cx = int((centers[hid1][0] + centers[hid2][0]) / 2.0 * width)
+                            cy = int((centers[hid1][1] + centers[hid2][1]) / 2.0 * height)
+                            visual_events.append({
+                                "t": time_s,
+                                "etype": etype,
+                                "x": cx,
+                                "y": cy,
+                                "gif_path": getattr(rule, "gif_path"),
+                                "scale_h": float(getattr(rule, "gif_scale_h", 0.20)),
+                            })
 
         frame_idx += 1
 
