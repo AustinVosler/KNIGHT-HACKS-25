@@ -67,9 +67,9 @@ def record():
 def gallery():
     return render_template('gallery.html')
 
-# @app.route('/about')
-# def about():
-#     return render_template('about.html')
+@app.route('/about')
+def about():
+    return render_template('about.html')
 
 @app.route('/trimming')
 def trimming():
