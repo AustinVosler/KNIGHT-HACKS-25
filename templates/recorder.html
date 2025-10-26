@@ -2,29 +2,11 @@
 block extra_css %}
 <link rel="stylesheet" href="/static/css/index.css" />
 <link rel="stylesheet" href="/static/css/recorder.css" />
-{% endblock %} {% block content %}
-<h1 class="brand">Record Your Video</h1>
-<div class="recorder-frame">
-  <video id="preview" width="640" height="480" autoplay muted></video>
-</div>
-<div class="recorder-actions">
-  <button class="cta recorder-btn" id="recordBtn">Start Recording</button>
-</div>
-<form id="uploadForm">
-  <input
-    type="text"
-    id="filename"
-    name="filename"
-    placeholder="Enter a name"
-    required
-  />
-  <button type="submit" class="cta uploadForm">Upload Video</button>
-</form>
-
+{% endblock %} 
 {% block content %}
+
   <div class="recorder-container">
     <div class="recorder-main">
-      <h1 class="brand">Record Your Video</h1>
       <div class="recorder-frame">
         <video id="preview" width="640" height="480" autoplay muted></video>
       </div>
@@ -61,7 +43,6 @@ block extra_css %}
       <button id="dismissNotification" class="cta secondary">Dismiss</button>
     </div>
   </div>
-{% endblock %}
 
 <div id="completionNotification" class="completion-notification hidden">
   <div class="notification-content">
