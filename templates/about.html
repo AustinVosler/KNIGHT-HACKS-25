@@ -2,15 +2,66 @@
 
 {% block title %}About{% endblock %}
 {% block body_class %}about-page{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/about.css" />{% endblock %}
 
 {% block content %}
-  <div class="about-links" style="position:relative; z-index:1; max-width: 720px; margin: 6rem auto 2rem; padding: 0 1rem;">
-    <h1 class="brand">About</h1>
+  <section class="team-section">
+    <h1 class="brand team-title">Meet the Team</h1>
+    <div class="team-grid">
+      <article class="team-member">
+        <img class="avatar" src="/static/img/austin.jpeg" alt="Austin Vosler headshot" />
+        <h3>Austin Vosler</h3>
+        <div class="team-links">
+          <a class="team-link linkedin" href="https://www.linkedin.com/in/austinvosler" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a class="team-link github" href="https://github.com/AustinVosler" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+      </article>
+      <article class="team-member">
+        <img class="avatar" src="/static/img/jake.JPG" alt="Jake Tattersall headshot" />
+        <h3>Jake Tattersall</h3>
+        <div class="team-links">
+          <a class="team-link linkedin" href="https://www.linkedin.com/in/jake-tattersall/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a class="team-link github" href="https://github.com/jake-tattersall" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+      </article>
+      <article class="team-member">
+        <img class="avatar" src="/static/img/Joanne.jpeg" alt="Joanne Wang headshot" />
+        <h3>Joanne Wang</h3>
+        <div class="team-links">
+          <a class="team-link linkedin" href="https://www.linkedin.com/in/qidi-wang" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a class="team-link github" href="https://github.com/AlphauroraE" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+      </article>
+      <article class="team-member">
+        <img class="avatar" src="/static/img/alex.jpeg" alt="Alex Ley-Soto headshot" />
+        <h3>Alex Ley-Soto</h3>
+        <div class="team-links">
+          <a class="team-link linkedin" href="https://www.linkedin.com/in/alexleysoto" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a class="team-link github" href="https://github.com/alexls05" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="about-intro">
+    <h2 class="about-heading">About the Project</h2>
     <p>
-      <a href="https://devpost.com/software/project-d6xs15" target="_blank" rel="noopener noreferrer">View the project on Devpost</a>
+      Gesture-driven storytelling fused with playful effects. Explore the project links below to
+      dive deeper into how it was built and the ideas that shaped it.
     </p>
-    <p>
-      <a href="https://github.com/AustinVosler/KNIGHT-HACKS-25" target="_blank" rel="noopener noreferrer">View the code on GitHub</a>
-    </p>
-  </div>
+    <div class="resource-links">
+      <a
+        class="resource-link"
+        href="https://devpost.com/software/project-d6xs15"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Devpost</a>
+      <a
+        class="resource-link"
+        href="https://github.com/AustinVosler/KNIGHT-HACKS-25"
+        target="_blank"
+        rel="noopener noreferrer"
+      >GitHub</a>
+    </div>
+  </section>
 {% endblock %}
