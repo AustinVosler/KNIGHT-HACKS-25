@@ -4,10 +4,9 @@
 {% block extra_css %}<link rel="stylesheet" href="/static/css/index.css" />{% endblock %}
 
 {% block content %}
-  <h1 class="brand">Gesture Demo</h1>
-  <form action="/record" method="get">
-    <button class="cta" id="actionBtn" type="submit">Start</button>
-  </form>
+  <script>
+    window.location.replace('/record');
+  </script>
 {% endblock %}
 
 {% block scripts %}
