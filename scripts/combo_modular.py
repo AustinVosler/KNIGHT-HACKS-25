@@ -29,10 +29,11 @@ import cv2
 import mediapipe as mp
 import pygame
 import os
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip # JW
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip  # JW: add CompositeVideoClip for GIF overlays
 from typing import Optional, List
 
 from .gesture_engine import (
+    FantasticGesture,
     GestureEngine,
     Symbol6Gesture,
     Symbol7Gesture,
@@ -408,28 +409,37 @@ def video_upload(filename) -> str:
     engine.register_gesture(FistGesture())
     engine.register_gesture(PeaceSignGesture())
     engine.register_gesture(ThumbsUpGesture())
+    engine.register_gesture(FantasticGesture(sound_path=["./sounds/fantastic.mp3"], volume=1.0))
     
     # Attach sound directly to the gesture class with a per-gesture volume
-    engine.register_gesture(MiddleFingerGesture(sound_path=["./sounds/fahh.mp3"], volume=1.0))
+    engine.register_gesture(MiddleFingerGesture(sound_path=["./sounds/fahh.mp3", "./sounds/thunder.mp3"], volume=0.6))
     
     # Register motions with sounds
-    engine.register_motion(RecoilMotion(
+    recoil_motion = RecoilMotion(
         movement_threshold=0.05, 
         gate_gesture="gun", 
         cooldown_s=0.6,
         sound_path=["./sounds/bang.mp3"],
         volume=0.6
-    ))
+    )
+    recoil_motion.gif_path = "./gifs/gun_recoil.gif"  
+    recoil_motion.gif_scale_h = 0.20  # fraction of video height
+    engine.register_motion(recoil_motion)
     # Hammer fist downward strike -> metal pipe impact
-    engine.register_motion(HammerStrikeMotion(
+    # Make GIF addable like sounds (optional single string): attach to the motion instance
+    hammer_motion = HammerStrikeMotion(
         movement_threshold=0.01,   # Slightly stricter than recoil to avoid noise
         gate_gesture="fist",
         cooldown_s=0.6,
         sound_path=["./sounds/metal_pipe.mp3"],
-        volume=0.6,
+        volume=0.3,
         require_downward=True,
         min_down_ratio=0.6,
-    ))
+    )
+    # Optional single-string GIF path; always resized later so it doesn't take too much space
+    hammer_motion.gif_path = "./gifs/metal_pipe.gif"  
+    hammer_motion.gif_scale_h = 0.20  # fraction of video height
+    engine.register_motion(hammer_motion)
     
     # Register proximity rules with sounds
     engine.register_rule(ProximityRule(
@@ -438,7 +448,7 @@ def video_upload(filename) -> str:
         threshold=0.50, 
         cooldown_s=0.6,
         sound_path=["./sounds/67.mp3"],
-        volume=0.1
+        volume=0.05
     ))
     engine.register_rule(ProximityRule(
         a="thumbs_up", 
@@ -453,6 +463,7 @@ def video_upload(filename) -> str:
     engine.register_gesture_rule(GestureTriggerRule(g="middle_finger", cooldown_s=1.0))
     engine.register_gesture_rule(GestureTriggerRule(g="korean_heart", cooldown_s=1.5))  # Longer cooldown for heart
     engine.register_gesture_rule(GestureTriggerRule(g="palm", cooldown_s=1.0))
+    engine.register_gesture_rule(GestureTriggerRule(g="fantastic", cooldown_s=1.0))
     # Uncomment to add more proximity rules:
     # engine.register_rule(ProximityRule(a="palm", b="fist", threshold=0.15, cooldown_s=0.6))
     # engine.register_rule(ProximityRule(a="peace", b="thumbs_up", threshold=0.15, cooldown_s=0.6))
@@ -477,6 +488,8 @@ def video_upload(filename) -> str:
 
     # STORE SOUND EVENTS WITH TIMESTAMPS
     sound_events = []  # List of tuples (time_in_seconds, sound_path, volume)
+    # STORE VISUAL (GIF) EVENTS WITH TIMESTAMPS AND POSITIONS
+    visual_events = []  # List of dicts: {t, etype, x, y, gif_path, scale_h}
     frame_idx = 0
     print(f"Scanning for hand events to place audio overlays... (Total frames: {total_frames}, FPS: {fps})")
 
@@ -494,10 +507,14 @@ def video_upload(filename) -> str:
         result = hands.process(rgb)
 
         events = []
+        centers = {}
         if result.multi_hand_landmarks:
             # Run engine (no drawing)
             out = engine.process(result.multi_hand_landmarks)
             events = out["events"]
+            overlays = out.get("overlays", [])
+            if overlays:
+                centers = overlays[-1].get("centers", {})  # hand_id -> (x_norm, y_norm)
             
             # Debug: print events as they happen
             if events:
@@ -527,6 +544,20 @@ def video_upload(filename) -> str:
                     paths = m.sound_path if isinstance(m.sound_path, list) else [m.sound_path]
                     for p in paths:
                         sound_events.append((time_s, p, m.volume))
+                # Record visual GIF overlay if configured (single string)
+                if m is not None and getattr(m, "gif_path", None):
+                    hid = e.get("hand_id")
+                    if hid is not None and hid in centers:
+                        cx = int(centers[hid][0] * width)
+                        cy = int(centers[hid][1] * height)
+                        visual_events.append({
+                            "t": time_s,
+                            "etype": etype,
+                            "x": cx,
+                            "y": cy,
+                            "gif_path": getattr(m, "gif_path"),
+                            "scale_h": float(getattr(m, "gif_scale_h", 0.20)),
+                        })
             
             # 3. Proximity events (format: "proximity:a+b")
             elif etype.startswith("proximity:"):
@@ -539,10 +570,10 @@ def video_upload(filename) -> str:
         frame_idx += 1
 
     cap.release()
-    print(f"Processed {frame_idx} frames. Found {len(sound_events)} sound events.")
+    print(f"Processed {frame_idx} frames. Found {len(sound_events)} sound events, {len(visual_events)} visual events.")
 
-    # -------------------- POST-PROCESS AUDIO --------------------
-    print("Combining detected sounds with the original video...")
+    # -------------------- POST-PROCESS AUDIO/VIDEO --------------------
+    print("Combining detected sounds and GIF overlays with the original video...")
 
     # Load original video (for its visuals and existing audio track)
     base_clip = VideoFileClip(filename)
@@ -558,22 +589,39 @@ def video_upload(filename) -> str:
         except Exception as e:
             print(f"Could not load sound {path}: {e}")
 
-    # Combine all audio (original + gesture sounds)
-    if base_clip.audio:
-        final_audio = CompositeAudioClip([base_clip.audio] + audio_clips)
-    else:
-        if audio_clips:
-            final_audio = CompositeAudioClip(audio_clips)
-        else:
-            final_audio = None
+    # Build visual overlays (GIFs) as video clips
+    overlay_clips = []
+    for ev in visual_events:
+        gif_path = ev["gif_path"]
+        try:
+            if not os.path.exists(gif_path):
+                print(f"GIF not found, skipping: {gif_path}")
+                continue
+            gif_clip = VideoFileClip(gif_path, has_mask=True)
+            target_h = max(1, int(height * float(ev.get("scale_h", 0.20))))
+            gif_clip = gif_clip.resize(height=target_h)
+            # position: center the GIF on (x, y)
+            pos_x = int(ev["x"] - gif_clip.w / 2)
+            pos_y = int(ev["y"] - gif_clip.h / 2)
+            gif_clip = gif_clip.set_start(ev["t"]).set_position((pos_x, pos_y))
+            overlay_clips.append(gif_clip)
+            print(f"Adding GIF at {ev['t']:.2f}s: {os.path.basename(gif_path)} @ ({pos_x},{pos_y}) h={target_h}")
+        except Exception as e:
+            print(f"Could not load GIF {gif_path}: {e}")
 
-    # Merge final audio into the ORIGINAL video visuals (no visual changes)
-    if final_audio:
-        # Set duration to match video to prevent extra frames
-        final_audio = final_audio.set_duration(video_duration)
-        final_clip = base_clip.set_audio(final_audio)
+    # Compose visuals: base video + GIF overlays
+    final_video = CompositeVideoClip([base_clip] + overlay_clips, size=(width, height))
+
+    # Combine all audio (original + gesture/motion/proximity sounds)
+    if base_clip.audio and audio_clips:
+        final_audio = CompositeAudioClip([base_clip.audio] + audio_clips).set_duration(video_duration)
+    elif audio_clips:
+        final_audio = CompositeAudioClip(audio_clips).set_duration(video_duration)
     else:
-        final_clip = base_clip
+        final_audio = base_clip.audio  # keep original if present; else None
+
+    if final_audio is not None:
+        final_video = final_video.set_audio(final_audio)
 
     # Save final video with embedded sound effects next to original
     base, _ = os.path.splitext(os.path.basename(filename))
@@ -582,7 +630,7 @@ def video_upload(filename) -> str:
     
     # Use preset and threads for better performance and quality
     # Key fix: Use r=fps to force constant frame rate without dropping frames
-    final_clip.write_videofile(
+    final_video.write_videofile(
     # output_path = filename.replace(".webm", "_sfx.mp4")
     # base_clip.write_videofile(
         output_path, 
@@ -598,11 +646,17 @@ def video_upload(filename) -> str:
     )
     
     # Close clips to release resources (Windows file locks)
-    final_clip.close()
+    # Cleanup clips to release resources (Windows file locks)
+    final_video.close()
     base_clip.close()
     for ac in audio_clips:
         try:
             ac.close()
+        except Exception:
+            pass
+    for oc in overlay_clips:
+        try:
+            oc.close()
         except Exception:
             pass
 
@@ -610,6 +664,6 @@ def video_upload(filename) -> str:
     return output_path
 
 
-# if __name__ == "__main__":
-#     main()
-    #video_upload("./videos/4.webm")
+if __name__ == "__main__":
+    #main()
+    video_upload("./videos/4.webm")

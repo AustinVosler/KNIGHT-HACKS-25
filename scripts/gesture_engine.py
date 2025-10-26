@@ -472,13 +472,49 @@ class OpenPalmGesture(Gesture):
         super().__init__("palm", sound_path=sound_path, volume=volume)
 
     def detect(self, lm_list) -> bool:
-        return (
-            _is_ext(lm_list, "thumb")
-            and _is_ext(lm_list, "index")
-            and _is_ext(lm_list, "middle")
-            and _is_ext(lm_list, "ring")
-            and _is_ext(lm_list, "pinky")
-        )
+        # Basic extension check
+        thumb_ext = _is_ext(lm_list, "thumb")
+        index_ext = _is_ext(lm_list, "index")
+        middle_ext = _is_ext(lm_list, "middle")
+        ring_ext = _is_ext(lm_list, "ring")
+        pinky_ext = _is_ext(lm_list, "pinky")
+
+        if not (thumb_ext and index_ext and middle_ext and ring_ext and pinky_ext):
+            return False
+
+        # Normalize by hand scale
+        scale = _scale(lm_list)
+
+        # Require fingers to be generally above the wrist (pointing upward)
+        wrist_y = lm_list[0][1]
+        tips = {
+            "thumb": lm_list[4],
+            "index": lm_list[8],
+            "middle": lm_list[12],
+            "ring": lm_list[16],
+            "pinky": lm_list[20],
+        }
+        upward_threshold = 0.06  # normalized units (tweakable)
+        # Check index/middle/ring/pinky tips are sufficiently above wrist
+        for k in ("index", "middle", "ring", "pinky"):
+            if (wrist_y - tips[k][1]) / scale < upward_threshold:
+                return False
+
+        # Require some lateral spread between finger tips (avoid closed-but-extended)
+        spread_im = euclid_2d((tips["index"][0], tips["index"][1]), (tips["middle"][0], tips["middle"][1])) / scale
+        spread_mr = euclid_2d((tips["middle"][0], tips["middle"][1]), (tips["ring"][0], tips["ring"][1])) / scale
+        spread_rp = euclid_2d((tips["ring"][0], tips["ring"][1]), (tips["pinky"][0], tips["pinky"][1])) / scale
+        avg_spread = (spread_im + spread_mr + spread_rp) / 3.0
+        min_avg_spread = 0.05  # normalized, tweakable
+        if avg_spread < min_avg_spread:
+            return False
+
+        # Thumb should not be pinched to index (distinguish from OK/korean heart)
+        thumb_index_dist = euclid_2d((tips["thumb"][0], tips["thumb"][1]), (tips["index"][0], tips["index"][1])) / scale
+        if thumb_index_dist < 0.18:
+            return False
+
+        return True
 
 
 class FistGesture(Gesture):
@@ -657,6 +693,53 @@ class KoreanHeartGesture(Gesture):
         # For Korean heart, the tips should be close (forming the heart point)
         # Gun pose will have tips far apart (pointing direction)
         return tip_distance < self.cross_threshold
+
+
+class FantasticGesture(Gesture):
+    """
+    Detects a four gesture, having all four fingers extended and thumb curled.
+    
+    This gesture requires:
+    - Index, middle, ring, and pinky fingers extended
+    - Thumb not extended
+    - Fingers pointing upwards (tips above wrist)
+    """
+    def __init__(self, sound_path: Optional[List[str]] = None, volume: float = 1.0):
+        super().__init__("fantastic", sound_path=sound_path, volume=volume)
+
+    def detect(self, lm_list) -> bool:
+        thumb_ext = _is_ext(lm_list, "thumb")
+        index_ext = _is_ext(lm_list, "index")
+        middle_ext = _is_ext(lm_list, "middle")
+        ring_ext = _is_ext(lm_list, "ring")
+        pinky_ext = _is_ext(lm_list, "pinky")
+
+        # Raw Y positions (screen coords: larger Y is lower on screen)
+        wrist_y = lm_list[0][1]
+        index_tip_y = lm_list[8][1]
+        middle_tip_y = lm_list[12][1]
+        ring_tip_y = lm_list[16][1]
+        pinky_tip_y = lm_list[20][1]
+
+        # Require the tips to be significantly above the wrist.
+        # Use hand scale to normalize the vertical distance so it works across sizes/distances.
+        scale = _scale(lm_list)
+        index_up = (wrist_y - index_tip_y) / scale
+        middle_up = (wrist_y - middle_tip_y) / scale
+        ring_up = (wrist_y - ring_tip_y) / scale
+        pinky_up = (wrist_y - pinky_tip_y) / scale
+
+        # Threshold for "significantly above" (tweakable; ~0.06 means tips must be ~6% of hand-width above wrist)
+        upward_threshold = 0.06
+
+        fingers_upward = (
+            index_up > upward_threshold
+            and middle_up > upward_threshold
+            and ring_up > upward_threshold
+            and pinky_up > upward_threshold
+        )
+
+        return (not thumb_ext) and index_ext and middle_ext and ring_ext and pinky_ext and fingers_upward
 
 
 class RecoilMotion(Motion):
