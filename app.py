@@ -14,6 +14,8 @@ if os.path.exists(temp_PATH):
 os.makedirs(temp_PATH, exist_ok=True)
 os.makedirs(video_PATH, exist_ok=True)
 
+FILE_PATH = 'FILES'
+
 # Connect to SQLite database (or create it)
 def database_connection():
     return sqlite3.connect('videos.db')
