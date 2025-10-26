@@ -1,6 +1,3 @@
-/* Shared background and swirl styles for all pages */
-
-/* Page container should allow scrolling */
 .page {
   position: relative;
   width: 100vw;
@@ -20,7 +17,7 @@ body {
 }
 
 nav a.active {
-  pointer-events: none; /* disables clicking */
+  pointer-events: none;
   opacity: 0.6;
   text-decoration: underline;
 }
@@ -63,40 +60,6 @@ nav a.active {
   bottom: 10vw;
   background: radial-gradient(circle at 40% 40%, var(--accent-3) 60%, var(--accent-8) 100%);
   transform: rotate(-10deg);
-}
-
-/* Swirly retro lines */
-/* Swirly retro lines */
-.swirl-line {
-  position: absolute;
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 100px;
-  opacity: 0.7;
-}
-.swirl-line-1 {
-  width: 60vw;
-  height: 22px;
-  top: 18vh;
-  left: -8vw;
-  background: linear-gradient(90deg, var(--accent-2) 0%, var(--accent-4) 80%, transparent 100%);
-  transform: rotate(-8deg) skewY(-12deg);
-}
-.swirl-line-2 {
-  width: 48vw;
-  height: 16px;
-  top: 54vh;
-  right: -10vw;
-  background: linear-gradient(90deg, var(--accent-3) 0%, var(--accent-6) 80%, transparent 100%);
-  transform: rotate(12deg) skewY(8deg);
-}
-.swirl-line-3 {
-  width: 38vw;
-  height: 12px;
-  bottom: 12vh;
-  left: 12vw;
-  background: linear-gradient(90deg, var(--accent-5) 0%, var(--accent-7) 80%, transparent 100%);
-  transform: rotate(-16deg) skewY(-6deg);
 }
 
 @media (max-width: 520px) {
