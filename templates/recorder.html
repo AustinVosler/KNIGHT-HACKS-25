@@ -1,42 +1,41 @@
-{% extends "base.html" %}
-
-{% block body_class %}recorder-page{% endblock %}
-
-{% block extra_css %}
+{% extends "base.html" %} {% block body_class %}recorder-page{% endblock %} {%
+block extra_css %}
 <link rel="stylesheet" href="/static/css/index.css" />
 <link rel="stylesheet" href="/static/css/recorder.css" />
-{% endblock %}
+{% endblock %} {% block content %}
+<h1 class="brand">Record Your Video</h1>
+<div class="recorder-frame">
+  <video id="preview" width="640" height="480" autoplay muted></video>
+</div>
+<div class="recorder-actions">
+  <button class="cta recorder-btn" id="recordBtn">Start Recording</button>
+</div>
+<form id="uploadForm">
+  <input
+    type="text"
+    id="filename"
+    name="filename"
+    placeholder="Enter a name"
+    required
+  />
+  <button type="submit" class="cta uploadForm">Upload Video</button>
+</form>
 
-{% block content %}
-  <h1 class="brand">Record Your Video</h1>
-  <div class="recorder-frame">
-    <video id="preview" width="640" height="480" autoplay muted></video>
-  </div>
-  <div class="recorder-actions">
-    <button class="cta recorder-btn" id="recordBtn">Start Recording</button>
-  </div>
-  <form id="uploadForm">
-    <input type="text" id="filename" name="filename" placeholder="Enter a name" required />
-    <button type="submit" class="cta uploadForm">Upload Video</button>
-  </form>
-  
-  <!-- Loading and notification UI -->
-  <div id="processingStatus" class="processing-status hidden">
-    <div class="loading-spinner"></div>
-    <p id="statusMessage">Processing your video with gesture effects...</p>
-  </div>
-  
-  <div id="completionNotification" class="completion-notification hidden">
-    <div class="notification-content">
-      <h2>✅ Video Ready!</h2>
-      <p>Your video has been processed with all gesture effects.</p>
-      <a href="/gallery" class="cta">View in Gallery</a>
-      <button id="dismissNotification" class="cta secondary">Dismiss</button>
-    </div>
-  </div>
-{% endblock %}
+<!-- Loading and notification UI -->
+<div id="processingStatus" class="processing-status hidden">
+  <div class="loading-spinner"></div>
+  <p id="statusMessage">Processing your video with gesture effects...</p>
+</div>
 
-{% block scripts %}
+<div id="completionNotification" class="completion-notification hidden">
+  <div class="notification-content">
+    <h2>✅ Video Ready!</h2>
+    <p>Your video has been processed with all gesture effects.</p>
+    <a href="/gallery" class="cta">View in Gallery</a>
+    <button id="dismissNotification" class="cta secondary">Dismiss</button>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
 <script>
   const preview = document.getElementById("preview");
   const recordBtn = document.getElementById("recordBtn");
@@ -68,20 +67,22 @@
         recordedChunks = [];
 
         // Upload video to server
-        videoFile = new File([blob], "blob.webm", { type: 'video/webm' });
+        videoFile = new File([blob], "blob.webm", { type: "video/webm" });
         const formData = new FormData();
-        formData.append('file', videoFile);
+        formData.append("file", videoFile);
 
-        fetch('/api/videos', {
-          method: 'POST',
-          body: formData
-        }).then(response => response.json())
-        .then(data => {
-          console.log("Video uploaded with ID: ", data.id);
-          id = data.id;
-        }).catch(err => {
-          console.error(err);
-        });
+        fetch("/api/videos", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Video uploaded with ID: ", data.id);
+            id = data.id;
+          })
+          .catch((err) => {
+            console.error(err);
+          });
       };
     })
     .catch((err) => {
@@ -100,6 +101,7 @@
       recordBtn.textContent = "Start Recording";
       recordBtn.classList.remove("recording");
       showPreview();
+
     }
   };
 
@@ -116,49 +118,53 @@
       filename += ".webm";
     }
     const formData = new FormData();
-    formData.append('fileName', filename);
+    formData.append("fileName", filename);
 
     // Hide form and show loading
     uploadForm.classList.add("hidden");
     showProcessingStatus();
 
     fetch(`/api/videos/${id}`, {
-      method: 'PUT',
-      body: formData
-    }).then(response => {
-      startProcess(id);
-    }).catch(err => {
-      console.error(err);
-      hideProcessingStatus();
-      alert("Error uploading video. Please try again.");
-    });
+      method: "PUT",
+      body: formData,
+    })
+      .then((response) => {
+        startProcess(id);
+      })
+      .catch((err) => {
+        console.error(err);
+        hideProcessingStatus();
+        alert("Error uploading video. Please try again.");
+      });
   };
 
-  async function startProcess(id){
+  async function startProcess(id) {
     fetch(`/api/videos/process/${id}`, {
-      method: 'PUT'
-    }).then(() => {
-      // Start polling for completion
-      pollProcessingStatus(id);
-    }).catch(err => {
-      console.error(err);
-      hideProcessingStatus();
-      alert("Error processing video. Please try again.");
-    });
+      method: "PUT",
+    })
+      .then(() => {
+        // Start polling for completion
+        pollProcessingStatus(id);
+      })
+      .catch((err) => {
+        console.error(err);
+        hideProcessingStatus();
+        alert("Error processing video. Please try again.");
+      });
   }
 
   function pollProcessingStatus(id) {
     const pollInterval = setInterval(() => {
       fetch(`/api/videos/status/${id}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.status === 'completed') {
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === "completed") {
             clearInterval(pollInterval);
             hideProcessingStatus();
             showCompletionNotification(data.processed_id);
           }
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error checking status:", err);
           clearInterval(pollInterval);
           hideProcessingStatus();
@@ -180,24 +186,26 @@
   function showCompletionNotification(processedId) {
     const notificationDiv = document.getElementById("completionNotification");
     notificationDiv.classList.remove("hidden");
-    
+
     // Play a notification sound if available
     try {
-      const audio = new Audio('/static/sounds/notification.mp3');
+      const audio = new Audio("/static/sounds/notification.mp3");
       audio.play().catch(() => {}); // Silently fail if sound doesn't exist
     } catch (e) {}
   }
 
-  document.getElementById("dismissNotification")?.addEventListener("click", () => {
-    document.getElementById("completionNotification").classList.add("hidden");
-  });
+  document
+    .getElementById("dismissNotification")
+    ?.addEventListener("click", () => {
+      document.getElementById("completionNotification").classList.add("hidden");
+    });
 
-  async function showPreview(){
-    recordBtn.classList.add("hidden")
-    preview.srcObject.getTracks().forEach(track => track.stop());
+  async function showPreview() {
+    recordBtn.classList.add("hidden");
+    preview.srcObject.getTracks().forEach((track) => track.stop());
     preview.srcObject = null;
-    while(videoFile === undefined){
-      await new Promise(r => setTimeout(r, 100));
+    while (videoFile === undefined) {
+      await new Promise((r) => setTimeout(r, 100));
     }
     const url = URL.createObjectURL(videoFile);
     preview.src = url;
@@ -206,6 +214,6 @@
 
     uploadForm.classList.remove("hidden");
   }
-// ...existing code...
+  // ...existing code...
 </script>
 {% endblock %}
