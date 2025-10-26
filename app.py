@@ -7,15 +7,14 @@ import shutil
 import uuid
 from scripts.combo_modular import video_upload
 
-temp_PATH = 'FILES/temp'
-video_PATH = 'FILES/videos'
-if os.path.exists(temp_PATH):
-    pass
-    # shutil.rmtree(temp_PATH)
-os.makedirs(temp_PATH, exist_ok=True)
-os.makedirs(video_PATH, exist_ok=True)
+# temp_PATH = 'FILES/temp'
+# video_PATH = 'FILES/videos'
+# if os.path.exists(temp_PATH):
+#     shutil.rmtree(temp_PATH)
+# os.makedirs(temp_PATH, exist_ok=True)
+# os.makedirs(video_PATH, exist_ok=True)
 
-FILE_PATH = "FILES"
+FILE_PATH = 'FILES'
 
 # Connect to SQLite database (or create it)
 def database_connection():
@@ -127,7 +126,7 @@ def save_video(id):
             return jsonify({"error": "Temp video not found"}), 404
 
         shutil.move(temp_path, final_path)
-        c.execute('UPDATE videos SET folder = ? WHERE id = ?', ("videos", id))
+        c.execute('UPDATE unprocessed_videos SET folder = ? WHERE id = ?', ("videos", id))
         conn.commit()
 
     return jsonify({"message": "Video moved to videos folder"}), 200
